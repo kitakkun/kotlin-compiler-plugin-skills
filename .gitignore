@@ -1,0 +1,44 @@
+# Build artefacts (Gradle, Kotlin incremental cache) — applies to verification/, evaluation/, and skills/*/example/
+.gradle/
+build/
+.kotlin/
+
+# Per-machine Gradle settings (typically just `org.gradle.java.home=<local JDK path>`)
+gradle.properties
+
+# IntelliJ / IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local user state — never publish
+# .claude/ holds maintainer-specific Claude Code config (settings, locks, transcripts)
+# and isn't part of the plugin distribution. Plugin manifest lives in .claude-plugin/.
+# Exception: .claude/agents/ holds maintainer review agents that ARE tracked.
+.claude/*
+!.claude/agents/
+work/
+
+# Memory storage — Claude-internal, not part of the plugin
+**/memory/
+
+# Per-evaluation last-run logs (build + sample run output, kept for inspection across runs)
+evaluation/*/LAST_BUILD.log
+evaluation/*/LAST_RUN.log
+evaluation/*/LAST_DIAGNOSTICS.log
+evaluation/*/LAST_DIAGNOSTICS_OPERATOR.log
+
+# Per-evaluation agent work directory (the agent edits these freely; results are in RESULT.md)
+evaluation/*/work/
+
+# Local sandbox tempdirs created by scripts/run-evaluation.sh and scripts/run-verification.sh
+# (the scripts themselves are tracked; only their /tmp output is per-machine)
+
+# In-repo sandbox tempdirs from agent-driven verification sweeps (huge gradle build artefacts).
+.verify-scratch/
+.sandbox-*/

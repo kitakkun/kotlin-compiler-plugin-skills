@@ -1,0 +1,12 @@
+{
+  "name": "kotlin-compiler-plugin-skills",
+  "owner": {
+    "name": "kitakkun"
+  },
+  "plugins": [
+    {
+      "name": "kotlin-compiler-plugin-skills",
+      "source": "."
+    }
+  ]
+}
