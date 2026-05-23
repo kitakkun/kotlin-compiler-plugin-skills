@@ -15,6 +15,8 @@ In Claude Code, register this repo as a plugin marketplace, then install the plu
 
 Skills are auto-discovered after install; list them via `/plugin`.
 
+Install footprint: the full repo is copied to `~/.claude/plugins/cache/` (a few MB). Only `skills/` files are loaded into Claude's context — the bundled `verification/` (13 working reference plugins) and `evaluation/` (6 benchmark tasks) sit on disk for you to inspect locally and never enter the token budget.
+
 To uninstall: `/plugin uninstall kotlin-compiler-plugin-skills@kotlin-compiler-plugin-skills`.
 
 ## What's included
@@ -142,7 +144,7 @@ For plugin authors writing code that targets multiple Kotlin compiler versions, 
 
 | Plugin version | Validated against Kotlin |
 |---|---|
-| (unreleased) | 2.3.21 |
+| 0.1.0 | 2.3.21 |
 
 ## Contributing
 
