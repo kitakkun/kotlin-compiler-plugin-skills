@@ -6,7 +6,7 @@
   "plugins": [
     {
       "name": "kotlin-compiler-plugin-skills",
-      "source": "."
+      "source": "./"
     }
   ]
 }
