@@ -169,6 +169,20 @@ val LOOKUP_FOR_GENERATOR: LookupPredicate = LookupPredicate.create {
 
 Use `DeclarationPredicate` for `matches`, `LookupPredicate` for `getSymbolsByPredicate`. Both `BuilderContext`s are nearly identical, so converting between them is mechanical.
 
+**The register-side has to stay in `DeclarationPredicate` terms.** `FirDeclarationPredicateRegistrar.register(...)` only takes a `DeclarationPredicate`; there is no `LookupPredicate` overload. The session-wide annotation index is populated from those `DeclarationPredicate` FQNs, and `getSymbolsByPredicate(LookupPredicate)` then queries that same index. So the typical "enumerate annotated declarations" plugin keeps **two predicates over the same FQN** — a `DeclarationPredicate` to register (so the FQN ends up in the session index) and a `LookupPredicate` to pass to `getSymbolsByPredicate`. Skipping the `DeclarationPredicate` registration makes `getSymbolsByPredicate` return an empty set silently, because the FQN was never indexed:
+
+```kotlin
+private val MARKER_FQN = FqName("com.example.Marker")
+private val MARKER_DECL  = DeclarationPredicate.create { annotated(MARKER_FQN) }
+private val MARKER_LOOKUP = LookupPredicate.create { annotated(MARKER_FQN) }
+
+override fun FirDeclarationPredicateRegistrar.registerPredicates() {
+    register(MARKER_DECL)              // populates the session-wide index
+}
+
+// later: session.predicateBasedProvider.getSymbolsByPredicate(MARKER_LOOKUP)
+```
+
 ## Common gotchas
 
 ### No extension registered the FQN — matches return empty silently

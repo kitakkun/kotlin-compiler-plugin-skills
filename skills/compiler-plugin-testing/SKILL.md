@@ -288,9 +288,15 @@ fun Test.setLibraryProperty(propName: String, jarName: String) {
     val path = testArtifacts.files
         .find { """$jarName-\d.*""".toRegex().matches(it.name) }
         ?.absolutePath
-        ?: return  // silently no-ops if the dependency is missing — see gotcha below
+        ?: error("testArtifacts is missing $jarName — add `testArtifacts(\"org.jetbrains.kotlin:$jarName:<version>\")` to `dependencies { }`")
     systemProperty(propName, path)
 }
+```
+
+**KMP-module jars** — if a `testArtifacts(...)` coordinate is a Kotlin Multiplatform module (e.g. `kotlin { jvm() }`), the published JVM artifact name is `<module>-jvm-<version>.jar`, *not* `<module>-<version>.jar`. The regex `"""$jarName-\d.*"""` won't match it; pass the `-jvm`-suffixed name explicitly:
+
+```kotlin
+setLibraryProperty("my.plugin.runtime", "my-plugin-runtime-jvm")
 ```
 
 ### Test runner classes (in `test-fixtures/`)
@@ -307,6 +313,35 @@ A diagnostic test runner extends `AbstractFirPhasedDiagnosticTest`; a box test r
 | `EnvironmentBasedStandardLibrariesPathProvider`, `KotlinStandardLibrariesPathProvider` | `org.jetbrains.kotlin.test.services` |
 
 The official template's `compiler-plugin/test-fixtures/.../runners/*.kt` files have the exact import lists for the Kotlin version it tracks.
+
+**`configure` vs `configuration`** — `AbstractKotlinCompilerTest` exposes two similarly-named methods. `configuration(builder)` is **abstract** and reserved for framework-internal assembly (the immediate `Abstract*` superclass implements it); you do **not** override it. `configure(builder)` is **open** and the documented user hook — that's where you add directives and configurators. Overriding the wrong one produces `'configuration' overrides nothing` or silently bypasses the framework setup.
+
+**Pick the abstract `*Base` class, not a concrete leaf runner.** The framework ships both `AbstractFirBlackBoxCodegenTestBase(parser: FirParser)` (and its diagnostic counterpart) *and* concrete subclasses like `AbstractFirLightTreeBlackBoxCodegenTest` / `AbstractFirPsiBlackBoxCodegenTest` that pin `FirParser` and implement `RunnerWithTargetBackendForTestGeneratorMarker`. Those leaf classes are JetBrains-internal scaffolding for their own test generator; using one as the base of *your* `AbstractMyXxxTest` makes the generator throw
+
+```
+IllegalArgumentException: Test runner AbstractMyBoxTest which inherits from
+RunnerWithTargetBackendForTestGeneratorMarker and used as base class
+```
+
+Extend the `*Base` class and pass `FirParser.LightTree` (or `Psi`) as a constructor argument, as below.
+
+**`createKotlinStandardLibrariesPathProvider` — overriding a single method requires re-implementing every abstract one.** `EnvironmentBasedStandardLibrariesPathProvider` is the supplied implementation and is the right return value for typical use. If you need to substitute just one path (e.g. point `minimalRuntimeJarForTests()` at a custom jar), `KotlinStandardLibrariesPathProvider` is abstract with ~12 methods — you can't subclass and override one. Use a delegating wrapper:
+
+```kotlin
+object MyPathProvider : KotlinStandardLibrariesPathProvider() {
+    private val base = EnvironmentBasedStandardLibrariesPathProvider
+    override fun minimalRuntimeJarForTests(): File = File(System.getProperty("my.minimal.runtime.jar")!!)
+    override fun runtimeJarForTests(): File = base.runtimeJarForTests()
+    override fun runtimeJarForTestsWithJdk8(): File = base.runtimeJarForTestsWithJdk8()
+    override fun reflectJarForTests(): File = base.reflectJarForTests()
+    override fun kotlinTestJarForTests(): File = base.kotlinTestJarForTests()
+    override fun scriptRuntimeJarForTests(): File = base.scriptRuntimeJarForTests()
+    override fun jvmAnnotationsForTests(): File = base.jvmAnnotationsForTests()
+    // …delegate every remaining abstract method to `base`
+}
+```
+
+Boilerplate-heavy but mechanical. Most plugins never need this — only override when a specific jar must come from somewhere other than the `testArtifacts` configuration.
 
 ```kotlin
 // test-fixtures/.../runners/AbstractJvmDiagnosticTest.kt
@@ -335,6 +370,7 @@ open class AbstractJvmBoxTest : AbstractFirBlackBoxCodegenTestBase(FirParser.Lig
         super.configure(builder)
         defaultDirectives {
             +CodegenTestDirectives.DUMP_IR
+            +CodegenTestDirectives.IGNORE_DEXING  // unless you specifically test Android/R8 compatibility
             +FirDiagnosticsDirectives.FIR_DUMP
             +JvmEnvironmentConfigurationDirectives.FULL_JDK
         }
@@ -342,6 +378,8 @@ open class AbstractJvmBoxTest : AbstractFirBlackBoxCodegenTestBase(FirParser.Lig
     }
 }
 ```
+
+`IGNORE_DEXING` matters because the default box-test pipeline includes a D8/R8 step that loads `com.android.tools.r8.origin.Origin`. Without `IGNORE_DEXING`, box tests fail at startup with `NoClassDefFoundError: com/android/tools/r8/origin/Origin` unless you also add R8 as a test dependency. Plugins that don't specifically validate Android compatibility should opt out via `IGNORE_DEXING`.
 
 `configurePlugin()` registers the plugin's extensions inside the test compiler:
 
@@ -363,6 +401,45 @@ private class ExtensionRegistrarConfigurator(testServices: TestServices)
 }
 ```
 
+### Exposing the plugin's runtime types to testData
+
+If your testData files `import` plugin-defined annotations (`@MyMarker`) or runtime helper types that the plugin generates calls into, those types must be **on the compilation classpath of the test compiler**, not just on the test runtime classpath. `useCustomRuntimeClasspathProviders` adjusts the *runtime* classpath used to execute `box()` — it does *not* affect what the test compiler can resolve while compiling the testData.
+
+The right hook is a second `EnvironmentConfigurator` that calls `addJvmClasspathRoot(...)`. The path comes from a Gradle system property:
+
+```kotlin
+// test-fixtures/.../services/ClasspathConfigurator.kt
+class ClasspathConfigurator(testServices: TestServices) : EnvironmentConfigurator(testServices) {
+    override fun configureCompilerConfiguration(
+        configuration: CompilerConfiguration,
+        module: TestModule,
+    ) {
+        configuration.addJvmClasspathRoot(File(System.getProperty("my.plugin.annotations.jar")!!))
+    }
+}
+
+fun TestConfigurationBuilder.configurePlugin() {
+    useConfigurators(::ExtensionRegistrarConfigurator, ::ClasspathConfigurator)
+}
+```
+
+In `plugin/build.gradle.kts`, pass the JAR path through a system property:
+
+```kotlin
+val annotationsRuntimeClasspath: Configuration by configurations.creating
+
+dependencies {
+    annotationsRuntimeClasspath(project(":my-plugin-annotations"))
+}
+
+tasks.test {
+    dependsOn(annotationsRuntimeClasspath)
+    systemProperty("my.plugin.annotations.jar", annotationsRuntimeClasspath.singleFile.absolutePath)
+}
+```
+
+This is the most-frequently-missing piece — almost every realistic plugin ships an annotation module or a runtime helper module, and without this configurator, testData fails with `Unresolved reference 'MyMarker'`.
+
 ### Generated tests
 
 The framework provides a DSL that walks `testData/` and emits one JUnit 5 test class per abstract runner. Add a `main()`:
@@ -379,6 +456,8 @@ fun main() {
 }
 ```
 
+`testDataRoot` and `testsRoot` are resolved against the **JavaExec task's `workingDir`** (set to `rootDir` above), not the plugin module. The `"plugin/..."` prefix above assumes the plugin module sits directly under the root project. For a nested module like `my-plugin-compiler/`, write `testDataRoot = "my-plugin-compiler/testData"` instead — getting this wrong produces zero generated tests with no error.
+
 Wire it as a Gradle task that runs before test compilation:
 
 ```kotlin
@@ -390,6 +469,10 @@ val generateTests by tasks.registering(JavaExec::class) {
     workingDir = rootDir
 }
 tasks.compileTestKotlin { dependsOn(generateTests) }
+// If KSP is enabled or test sources include .java, those tasks also consume test-gen
+// outputs. Gradle 8 warns about the implicit dependency; Gradle 9 fails the build.
+tasks.matching { it.name == "kspTestKotlin" || it.name == "compileTestJava" }
+    .configureEach { dependsOn(generateTests) }
 ```
 
 Run `./gradlew :plugin:generateTests` to regenerate `test-gen/`. Forgetting to regenerate after adding a new `testData/` file means the new fixture is silently skipped.
@@ -458,7 +541,7 @@ A new `.kt` file added under `testData/` does not become a test until `generateT
 
 ### B: `NoSuchFileException` / `idea.home.path` not set
 
-Symptom: tests fail before any test data is loaded with errors mentioning `idea.home.path` or a missing kotlin-stdlib jar. Cause: missing `systemProperty(...)` calls in `tasks.test`, often because a `setLibraryProperty(...)` helper silently no-oped when its corresponding `testArtifacts(...)` dependency was misspelled or absent. Run `./gradlew :plugin:test --info` to see the exact `-D` flags being passed; cross-check that all six `org.jetbrains.kotlin.test.*` properties show non-empty values, and that the `testArtifacts` configuration resolved every coordinate.
+Symptom: tests fail before any test data is loaded with errors mentioning `idea.home.path` or a missing kotlin-stdlib jar. Cause: missing `systemProperty(...)` calls in `tasks.test`. With the fail-loud `setLibraryProperty(...)` shown above, a missing `testArtifacts(...)` dependency is surfaced immediately as `error("testArtifacts is missing <jarName>…")` at task configuration; older copies of the helper used `?: return` and silently no-oped, which is what produced the cryptic downstream `NoSuchFileException`. If you inherited the silent variant, switch it to `error(...)` first. Run `./gradlew :plugin:test --info` to see the exact `-D` flags being passed; cross-check that all six `org.jetbrains.kotlin.test.*` properties show non-empty values, and that the `testArtifacts` configuration resolved every coordinate.
 
 ### B: framework breaks after a Kotlin version bump
 

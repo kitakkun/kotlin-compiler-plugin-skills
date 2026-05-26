@@ -106,6 +106,10 @@ class MyGenerator(session: FirSession) : FirDeclarationGenerationExtension(sessi
 
     private fun matchesMarker(classSymbol: FirClassSymbol<*>): Boolean =
         session.predicateBasedProvider.matches(MY_MARKER_PREDICATE, classSymbol)
+    // `matches(...)` accepts a `DeclarationPredicate`. To *enumerate* every annotated class
+    // in the session (e.g. `session.predicateBasedProvider.getSymbolsByPredicate(...)`), you
+    // need a separate `LookupPredicate` — declare both flavours over the same FQN. See
+    // `fir-predicate-system` for the LookupPredicate.create { annotated(...) } counterpart.
 
     override fun getCallableNamesForClass(classSymbol: FirClassSymbol<*>, context: MemberGenerationContext): Set<Name> {
         if (!matchesMarker(classSymbol)) return emptySet()
@@ -235,6 +239,8 @@ override fun generateConstructors(context: MemberGenerationContext): List<FirCon
 ```
 
 Without `SpecialNames.INIT` returned for the *companion's* `getCallableNamesForClass`, `generateConstructors` is never asked about it, and the resulting companion class has no constructor — IR-side generation that tries to attach members (e.g. an `IrFactory`-built `parse` method on the companion) then fails downstream because the companion can't be instantiated. The three overrides are a unit; a "companion object generated but the build crashes at IR" is almost always a missing `INIT` advertisement on the companion.
+
+**`INIT` is mandatory only for classes that will actually be instantiated.** If you generate a class purely as a *marker / discovery anchor* — never referenced as a constructor call from user code or from IR you also generate — you can omit `SpecialNames.INIT` and skip `generateConstructors` entirely. The backend tolerates a class with no constructor as long as nothing tries to call `new`. Empty top-level classes used purely to carry metadata for a downstream module to discover (e.g. cross-module aspect registration) are the canonical case. Whenever you *do* call the synthesised class's constructor from anywhere — IR codegen, user source, or another plugin — `INIT` is required.
 
 ## Generating a top-level class (experimental)
 
