@@ -62,6 +62,27 @@ Original copyright applies to each snippet. See [`../../NOTICE.md`](../../NOTICE
 
 ## `AbstractKotlinCompilerTest` location
 
+### Claim: `configure(builder)` is the abstract user hook, `configuration` is a property
+- **File**: [`kotlin/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/AbstractKotlinCompilerTest.kt:62-109`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/AbstractKotlinCompilerTest.kt#L62-L109)
+- **Snippet**:
+  ```kotlin
+  protected val configuration: TestConfigurationBuilder.() -> Unit = {
+      defaultConfiguration()
+      // …
+      configureInternal(this)
+      // …
+  }
+
+  /**
+   * This is the main method to declare the test configuration.
+   * …
+   * If you inherit your test runner which already has an implemented [configure] method,
+   * then you ALWAYS need to call `super.configure(builder)` before expanding the test configuration.
+   */
+  abstract fun configure(builder: TestConfigurationBuilder)
+  ```
+  Confirms: `configuration` is a `val` (lambda-typed property) — overriding it as `fun configuration(...)` does not compile; the user-facing extension point is the abstract `configure(builder)`.
+
 ### Claim: "the common base class" lives in `tests-common-new/testFixtures`
 - **File**: [`kotlin/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/AbstractKotlinCompilerTest.kt:29`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/AbstractKotlinCompilerTest.kt#L29)
 - **Snippet**:
@@ -73,6 +94,15 @@ Original copyright applies to each snippet. See [`../../NOTICE.md`](../../NOTICE
               LanguageSettingsDirectives
           )
   ```
+
+## Empirically-observed framework behaviours (no permalink — sourced from running the framework)
+
+### Claim: `IGNORE_DEXING` skips a D8/R8 step that requires `com.android.tools.r8.origin.Origin`
+- **Status**: Observed empirically when running a `kotlin("jvm")`-only plugin's `:plugin:test` task without R8 on the test classpath. Symptom: `NoClassDefFoundError: com/android/tools/r8/origin/Origin` at test startup, before any test data is loaded. Adding `+CodegenTestDirectives.IGNORE_DEXING` to `defaultDirectives` resolves it. No permalink — the relevant pipeline wiring lives in the test framework's backend handlers and is not stable across patch releases.
+- See also: the `IGNORE_DEXING` directive itself is declared at [`CodegenTestDirectives.kt`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/directives/CodegenTestDirectives.kt) (search for the symbol — line number drifts).
+
+### Claim: extending concrete `AbstractFirLightTreeBlackBoxCodegenTest` / `AbstractFirPsiBlackBoxCodegenTest` as a test base throws `IllegalArgumentException`
+- **Status**: Observed empirically. Those classes implement `RunnerWithTargetBackendForTestGeneratorMarker`; the generator-side check that produces the exception lives in the test-generator infrastructure. The corrective action is to extend the parameterized `*Base` class instead. Permalink omitted because the exception originates from a private generator-side `require(...)` that has been renamed between patch releases.
 
 ## Plugin path conventions
 

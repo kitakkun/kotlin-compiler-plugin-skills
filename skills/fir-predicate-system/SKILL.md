@@ -169,19 +169,32 @@ val LOOKUP_FOR_GENERATOR: LookupPredicate = LookupPredicate.create {
 
 Use `DeclarationPredicate` for `matches`, `LookupPredicate` for `getSymbolsByPredicate`. Both `BuilderContext`s are nearly identical, so converting between them is mechanical.
 
-**The register-side has to stay in `DeclarationPredicate` terms.** `FirDeclarationPredicateRegistrar.register(...)` only takes a `DeclarationPredicate`; there is no `LookupPredicate` overload. The session-wide annotation index is populated from those `DeclarationPredicate` FQNs, and `getSymbolsByPredicate(LookupPredicate)` then queries that same index. So the typical "enumerate annotated declarations" plugin keeps **two predicates over the same FQN** — a `DeclarationPredicate` to register (so the FQN ends up in the session index) and a `LookupPredicate` to pass to `getSymbolsByPredicate`. Skipping the `DeclarationPredicate` registration makes `getSymbolsByPredicate` return an empty set silently, because the FQN was never indexed:
+**The "two predicates over the same FQN" convention.** What gets registered and what gets queried are two different objects. `FirDeclarationPredicateRegistrar.register(vararg predicates: AbstractPredicate<*>)` takes the common base of both predicate kinds (see [`FirExtension.kt:42-45`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/fir/tree/src/org/jetbrains/kotlin/fir/extensions/FirExtension.kt#L42-L45)), so either flavour can be passed and either causes the FQNs in `predicate.annotations` to land in the session-wide index. What actually breaks is the *query* side — `getSymbolsByPredicate(...)` requires a `LookupPredicate`, and `matches(...)` consumes a `DeclarationPredicate`. The conventional pattern, used by allopen / noarg / kotlinx-serialization, is therefore:
 
 ```kotlin
-private val MARKER_FQN = FqName("com.example.Marker")
-private val MARKER_DECL  = DeclarationPredicate.create { annotated(MARKER_FQN) }
-private val MARKER_LOOKUP = LookupPredicate.create { annotated(MARKER_FQN) }
+import org.jetbrains.kotlin.fir.extensions.FirDeclarationPredicateRegistrar
+import org.jetbrains.kotlin.fir.extensions.predicate.DeclarationPredicate
+import org.jetbrains.kotlin.fir.extensions.predicate.LookupPredicate
+import org.jetbrains.kotlin.name.FqName
+
+private val MARKER_FQN    = FqName("com.example.Marker")
+private val MARKER_DECL   = DeclarationPredicate.create { annotated(MARKER_FQN) }
+private val MARKER_LOOKUP = LookupPredicate.create     { annotated(MARKER_FQN) }
 
 override fun FirDeclarationPredicateRegistrar.registerPredicates() {
-    register(MARKER_DECL)              // populates the session-wide index
+    register(MARKER_DECL)
+    // register(MARKER_LOOKUP) is *not* required for the index — the FQN above
+    // is enough — but you may register the LookupPredicate as well if you want
+    // the registration site to mirror both query forms verbatim.
 }
 
-// later: session.predicateBasedProvider.getSymbolsByPredicate(MARKER_LOOKUP)
+// later, inside a checker:
+// session.predicateBasedProvider.matches(MARKER_DECL, declaration)
+// inside a generator:
+// session.predicateBasedProvider.getSymbolsByPredicate(MARKER_LOOKUP)
 ```
+
+Where things actually go silently empty is **no extension in the session registering the FQN at all** — see the section "Registering predicates from an extension" above. Once any registered predicate's `annotations` set contains the FQN, the index serves both `matches` and `getSymbolsByPredicate` queries against that FQN.
 
 ## Common gotchas
 

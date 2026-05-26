@@ -288,7 +288,7 @@ fun Test.setLibraryProperty(propName: String, jarName: String) {
     val path = testArtifacts.files
         .find { """$jarName-\d.*""".toRegex().matches(it.name) }
         ?.absolutePath
-        ?: error("testArtifacts is missing $jarName — add `testArtifacts(\"org.jetbrains.kotlin:$jarName:<version>\")` to `dependencies { }`")
+        ?: error("testArtifacts is missing $jarName — add the matching `testArtifacts(\"<group>:$jarName:<version>\")` coordinate to `dependencies { }`")
     systemProperty(propName, path)
 }
 ```
@@ -301,7 +301,7 @@ setLibraryProperty("my.plugin.runtime", "my-plugin-runtime-jvm")
 
 ### Test runner classes (in `test-fixtures/`)
 
-A diagnostic test runner extends `AbstractFirPhasedDiagnosticTest`; a box test runner extends `AbstractFirBlackBoxCodegenTestBase`. Both classes come from the test framework artifact. Imports are elided in the snippets below; every type referenced is in one of these specific packages:
+A diagnostic test runner extends `AbstractFirPhasedDiagnosticTest`; a box test runner extends `AbstractFirBlackBoxCodegenTestBase`. Both classes come from the test framework artifact. Imports are elided in the snippets below; the most commonly needed ones live in these packages:
 
 | Type | Package |
 |---|---|
@@ -310,38 +310,51 @@ A diagnostic test runner extends `AbstractFirPhasedDiagnosticTest`; a box test r
 | `FirDiagnosticsDirectives`, `JvmEnvironmentConfigurationDirectives`, `CodegenTestDirectives` | `org.jetbrains.kotlin.test.directives` |
 | `AbstractFirPhasedDiagnosticTest` | `org.jetbrains.kotlin.test.runners` |
 | `AbstractFirBlackBoxCodegenTestBase` | `org.jetbrains.kotlin.test.runners.codegen` |
-| `EnvironmentBasedStandardLibrariesPathProvider`, `KotlinStandardLibrariesPathProvider` | `org.jetbrains.kotlin.test.services` |
+| `EnvironmentBasedStandardLibrariesPathProvider`, `KotlinStandardLibrariesPathProvider`, `EnvironmentConfigurator`, `TestServices`, `TestModule` | `org.jetbrains.kotlin.test.services` |
+| `CompilerPluginRegistrar` | `org.jetbrains.kotlin.compiler.plugin` |
+| `CompilerConfiguration` | `org.jetbrains.kotlin.config` |
+| `addJvmClasspathRoot` (extension on `CompilerConfiguration`) | `org.jetbrains.kotlin.cli.jvm.config` |
+| `File` | `java.io` |
 
-The official template's `compiler-plugin/test-fixtures/.../runners/*.kt` files have the exact import lists for the Kotlin version it tracks.
+The official template's `compiler-plugin/test-fixtures/.../runners/*.kt` files have the exact import lists for the Kotlin version it tracks; treat the table above as a starting cheat sheet rather than an exhaustive list.
 
-**`configure` vs `configuration`** — `AbstractKotlinCompilerTest` exposes two similarly-named methods. `configuration(builder)` is **abstract** and reserved for framework-internal assembly (the immediate `Abstract*` superclass implements it); you do **not** override it. `configure(builder)` is **open** and the documented user hook — that's where you add directives and configurators. Overriding the wrong one produces `'configuration' overrides nothing` or silently bypasses the framework setup.
+**`configure` vs `configuration` — same prefix, different members.** `AbstractKotlinCompilerTest` ([source](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/AbstractKotlinCompilerTest.kt)) declares both:
 
-**Pick the abstract `*Base` class, not a concrete leaf runner.** The framework ships both `AbstractFirBlackBoxCodegenTestBase(parser: FirParser)` (and its diagnostic counterpart) *and* concrete subclasses like `AbstractFirLightTreeBlackBoxCodegenTest` / `AbstractFirPsiBlackBoxCodegenTest` that pin `FirParser` and implement `RunnerWithTargetBackendForTestGeneratorMarker`. Those leaf classes are JetBrains-internal scaffolding for their own test generator; using one as the base of *your* `AbstractMyXxxTest` makes the generator throw
-
+```kotlin
+protected val configuration: TestConfigurationBuilder.() -> Unit = { … }   // a property of lambda type
+abstract fun configure(builder: TestConfigurationBuilder)                  // the user hook
 ```
-IllegalArgumentException: Test runner AbstractMyBoxTest which inherits from
-RunnerWithTargetBackendForTestGeneratorMarker and used as base class
-```
 
-Extend the `*Base` class and pass `FirParser.LightTree` (or `Psi`) as a constructor argument, as below.
+`configure(builder)` is **abstract** and is the documented main hook — its own KDoc reads *"This is the main method to declare the test configuration."* That's where you add directives, configurators, and call `super.configure(builder)`. The intermediate `Abstract*` superclass (e.g. `AbstractFirBlackBoxCodegenTestBase`) implements `configure` and expects you to override it again. The `configuration` *property* is a lambda built up by the framework and consumed by `runTest`; you don't override it. Mistyping `override fun configuration(...)` produces `'configuration' overrides nothing` (it's a `val`, not a `fun`), and using an `override val configuration = { … }` clobbers the framework's pre-test setup. Always extend through `configure`.
+
+**Pick the abstract `*Base` class, not a concrete leaf runner.** The framework ships both `AbstractFirBlackBoxCodegenTestBase(parser: FirParser)` (and its diagnostic counterpart) *and* concrete subclasses like `AbstractFirLightTreeBlackBoxCodegenTest` / `AbstractFirPsiBlackBoxCodegenTest` that pin the parser. Empirically, extending one of those concrete leaf classes as the parent of your own `AbstractMyXxxTest` makes the `generateTestGroupSuiteWithJUnit5` generator throw an `IllegalArgumentException` of the shape *"Test runner AbstractMyBoxTest which inherits from RunnerWithTargetBackendForTestGeneratorMarker and used as base class"* — the leaf classes implement that marker interface as JetBrains-internal scaffolding for their own test generator and aren't intended for re-extension. Extend the `*Base` class instead and pass `FirParser.LightTree` (or `Psi`) as a constructor argument, as below.
 
 **`createKotlinStandardLibrariesPathProvider` — overriding a single method requires re-implementing every abstract one.** `EnvironmentBasedStandardLibrariesPathProvider` is the supplied implementation and is the right return value for typical use. If you need to substitute just one path (e.g. point `minimalRuntimeJarForTests()` at a custom jar), `KotlinStandardLibrariesPathProvider` is abstract with ~12 methods — you can't subclass and override one. Use a delegating wrapper:
 
 ```kotlin
+// Skeleton — NOT compilable as written. KotlinStandardLibrariesPathProvider declares
+// roughly a dozen abstract methods; you must override ALL of them, delegating the ones
+// you don't customise to `base`. Look up the full abstract list in the framework's source
+// (`org.jetbrains.kotlin.test.services.KotlinStandardLibrariesPathProvider`).
 object MyPathProvider : KotlinStandardLibrariesPathProvider() {
     private val base = EnvironmentBasedStandardLibrariesPathProvider
-    override fun minimalRuntimeJarForTests(): File = File(System.getProperty("my.minimal.runtime.jar")!!)
+
+    // The one we actually customise:
+    override fun minimalRuntimeJarForTests(): File =
+        File(System.getProperty("my.minimal.runtime.jar")!!)
+
+    // Examples of the delegating pattern — repeat for every remaining abstract:
     override fun runtimeJarForTests(): File = base.runtimeJarForTests()
     override fun runtimeJarForTestsWithJdk8(): File = base.runtimeJarForTestsWithJdk8()
     override fun reflectJarForTests(): File = base.reflectJarForTests()
     override fun kotlinTestJarForTests(): File = base.kotlinTestJarForTests()
     override fun scriptRuntimeJarForTests(): File = base.scriptRuntimeJarForTests()
     override fun jvmAnnotationsForTests(): File = base.jvmAnnotationsForTests()
-    // …delegate every remaining abstract method to `base`
+    // … and so on for every other abstract method; the IDE will flag missing ones.
 }
 ```
 
-Boilerplate-heavy but mechanical. Most plugins never need this — only override when a specific jar must come from somewhere other than the `testArtifacts` configuration.
+Boilerplate-heavy but mechanical (the IDE's "implement members" intent on `MyPathProvider` will list the remaining abstracts). Most plugins never need this — only override when a specific jar must come from somewhere other than the `testArtifacts` configuration.
 
 ```kotlin
 // test-fixtures/.../runners/AbstractJvmDiagnosticTest.kt
@@ -379,7 +392,7 @@ open class AbstractJvmBoxTest : AbstractFirBlackBoxCodegenTestBase(FirParser.Lig
 }
 ```
 
-`IGNORE_DEXING` matters because the default box-test pipeline includes a D8/R8 step that loads `com.android.tools.r8.origin.Origin`. Without `IGNORE_DEXING`, box tests fail at startup with `NoClassDefFoundError: com/android/tools/r8/origin/Origin` unless you also add R8 as a test dependency. Plugins that don't specifically validate Android compatibility should opt out via `IGNORE_DEXING`.
+`IGNORE_DEXING` matters because the default box-test pipeline includes a D8/R8 step. Empirically (verified by running the framework against a `jvm()`-only plugin without R8 on the test classpath), box tests fail at startup with `NoClassDefFoundError: com/android/tools/r8/origin/Origin`; setting `+CodegenTestDirectives.IGNORE_DEXING` in `defaultDirectives` skips that step. Plugins that don't specifically validate Android compatibility should opt out via `IGNORE_DEXING` rather than add R8 as a dependency.
 
 `configurePlugin()` registers the plugin's extensions inside the test compiler:
 
@@ -389,7 +402,7 @@ fun TestConfigurationBuilder.configurePlugin() {
     useConfigurators(::ExtensionRegistrarConfigurator)
 }
 
-private class ExtensionRegistrarConfigurator(testServices: TestServices)
+internal class ExtensionRegistrarConfigurator(testServices: TestServices)
     : EnvironmentConfigurator(testServices) {
     private val registrar = MyPluginComponentRegistrar()
     override fun CompilerPluginRegistrar.ExtensionStorage.registerCompilerExtensions(
@@ -401,6 +414,8 @@ private class ExtensionRegistrarConfigurator(testServices: TestServices)
 }
 ```
 
+(The configurator class is `internal` so it can be referenced by `::ClassName` from another file in the same module — see "Exposing the plugin's runtime types to testData" below for the second configurator. Don't make it `private`, or `::ExtensionRegistrarConfigurator` from a sibling `services/*.kt` file won't resolve.)
+
 ### Exposing the plugin's runtime types to testData
 
 If your testData files `import` plugin-defined annotations (`@MyMarker`) or runtime helper types that the plugin generates calls into, those types must be **on the compilation classpath of the test compiler**, not just on the test runtime classpath. `useCustomRuntimeClasspathProviders` adjusts the *runtime* classpath used to execute `box()` — it does *not* affect what the test compiler can resolve while compiling the testData.
@@ -409,15 +424,23 @@ The right hook is a second `EnvironmentConfigurator` that calls `addJvmClasspath
 
 ```kotlin
 // test-fixtures/.../services/ClasspathConfigurator.kt
-class ClasspathConfigurator(testServices: TestServices) : EnvironmentConfigurator(testServices) {
+internal class ClasspathConfigurator(testServices: TestServices)
+    : EnvironmentConfigurator(testServices) {
     override fun configureCompilerConfiguration(
         configuration: CompilerConfiguration,
         module: TestModule,
     ) {
-        configuration.addJvmClasspathRoot(File(System.getProperty("my.plugin.annotations.jar")!!))
+        val jar = System.getProperty("my.plugin.annotations.jar")
+            ?: error("system property my.plugin.annotations.jar not set — check tasks.test wiring")
+        configuration.addJvmClasspathRoot(File(jar))
     }
 }
+```
 
+Then extend the existing `configurePlugin()` in `ExtensionRegistrarConfigurator.kt` to chain the new configurator — don't redeclare `configurePlugin()`, that's a duplicate top-level declaration and won't compile:
+
+```kotlin
+// edit: test-fixtures/.../services/ExtensionRegistrarConfigurator.kt
 fun TestConfigurationBuilder.configurePlugin() {
     useConfigurators(::ExtensionRegistrarConfigurator, ::ClasspathConfigurator)
 }
