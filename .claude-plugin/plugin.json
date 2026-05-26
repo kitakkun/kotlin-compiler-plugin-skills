@@ -1,7 +1,7 @@
 {
   "name": "kotlin-compiler-plugin-skills",
   "description": "Reusable Claude Code skills for Kotlin compiler plugin development — covers project bootstrap, FIR (K2) frontend extensions, IR backend transformations, testing infrastructure, debugging, Gradle plugin packaging, and multi-version support.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": {
     "name": "kitakkun"
   },
