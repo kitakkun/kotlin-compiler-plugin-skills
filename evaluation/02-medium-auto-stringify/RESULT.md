@@ -1,68 +1,67 @@
-# Evaluation Result: 02-medium-auto-stringify — 2026-04-30
+# Evaluation Result: 02-medium-auto-stringify — 2026-05-27 (post-consolidation re-run)
+**Skills version**: kotlin-compiler-plugin@0.1.1 (single-skill consolidated layout, commit 463287a on real repo)
+**Kotlin version validated against**: 2.3.21
 
-**Skills version**: HEAD of `main` at evaluation time
-**Kotlin version validated against**: 2.3.20
+**Agent**: Claude Opus 4.7 (claude-opus-4-7)
+**Gradle launcher**: 9.5.0 (Homebrew openjdk 21.0.10)
 
-## Final Score: 100 / 100
+## Acceptance Criteria
 
-| Category | Score | Max |
-|---|---|---|
-| Functionality | 60 | 60 |
-| Code Quality | 20 | 20 |
-| Skill Adherence | 20 | 20 |
-
-## Functionality breakdown
-
-| # | Criterion | Result | Evidence |
+| # | Criterion | Result | Notes |
 |---|---|---|---|
-| 1 | Plugin builds (`./gradlew :plugin:jar`) | PASS | `BUILD SUCCESSFUL in 445ms`, `:plugin:jar` task succeeded. |
-| 2 | Sample compiles (`./gradlew :sample:compileKotlin`) | PASS | `:sample:compileKotlin` succeeded as part of `:sample:run` (`BUILD SUCCESSFUL in 7s`). |
-| 3 | `Person(...).toAutoString()` resolves at compile time | PASS | Sample compiles with the call present at `sample/src/main/kotlin/com/example/app/Main.kt:12`. |
-| 4 | Synthesised method appears in IR | PASS | `javap -p Person.class` shows `public final java.lang.String toAutoString();`. |
-| 5 | Output for Person | PASS | `grep -F 'Person(name=Alice, age=30)' /tmp/02-out.txt` matched (line 15). |
-| 6 | Output for Box | PASS | `grep -F 'Box(width=10, height=20, opaque=true)' /tmp/02-out.txt` matched (line 16). |
-| 7 | Untagged class lacks the method | PASS | After temporarily replacing the commented line with `println(Untagged("x").toAutoString())`, build failed with `e: ...Main.kt:14:27 Unresolved reference 'toAutoString'.`; Main.kt restored. |
-| 8 | Method not added to unannotated classes | PASS | `javap -p Untagged.class` shows only `<init>` and `getFoo()` — no `toAutoString`. |
-| 9 | Method visibility is `public` | PASS | `javap` shows `public final java.lang.String toAutoString();` on Person.class and Box.class. |
-| 10 | No `IrValidation:` errors | PASS | `grep -c 'IrValidation:' /tmp/02-out.txt` returned `0`. |
+| 1 | Plugin builds | PASS | `./gradlew :plugin:jar` BUILD SUCCESSFUL on first compile after one tiny import fix (see Notes). |
+| 2 | Sample compiles | PASS | `./gradlew :sample:compileKotlin` succeeds; the plugin loads via `-Xplugin=` and synthesises the member. |
+| 3 | `Person(...).toAutoString()` resolves at compile time | PASS | The sample call site compiles without a cast. |
+| 4 | Synthesised method appears in IR | PASS | `javap -p .../Person.class` shows `public final java.lang.String toAutoString();`. |
+| 5 | Output for Person | PASS | `:sample:run` printed `Person(name=Alice, age=30)` (grep -F confirmed). |
+| 6 | Output for Box | PASS | Same run printed `Box(width=10, height=20, opaque=true)`. |
+| 7 | Untagged class lacks the method | PASS | Uncommented `Untagged("x").toAutoString()` then ran `:sample:compileKotlin`: failed with `Unresolved reference 'toAutoString'`. Reverted after confirming. |
+| 8 | Method not added to unannotated classes | PASS | `javap -p .../Untagged.class` shows only `getFoo()` and the constructor — no `toAutoString`. |
+| 9 | Method visibility is `public` | PASS | `javap` line is `public final java.lang.String toAutoString();`. |
+| 10 | No `IrValidation` errors | PASS | `grep -c 'IrValidation:' /tmp/02-out.txt` = 0 over the full `:sample:run --rerun-tasks` log. |
 
-10/10 PASS → `(10/10) × 60 = 60`.
+## Score: 10 / 10 (100%)
 
-## Code Quality breakdown
+## Implementation notes
 
-| Sub-axis | Score | Notes |
-|---|---|---|
-| File organization | 5 | Clean package layout: `com.example.autostringify` (registrar/CLI/names) with `fir/` and `ir/` sub-packages. Plugin/sample modules separated per the bootstrap convention. `META-INF/services/` contains both `CompilerPluginRegistrar` and `CommandLineProcessor` registrations. |
-| Idiomatic Kotlin | 5 | `object AutoStringifyPluginNames` (constants), `object AutoStringifyGeneratedDeclarationKey`. `companion object` holds the predicate. No Java-style getters/setters; nullability used only where needed (`getter` null-check). Named arguments used in `createMemberFunction`. |
-| Readability | 5 | Names are descriptive (`AutoStringifyDeclarationGenerator`, `AutoStringifyBodyFiller`, `AUTO_STRINGIFY_PREDICATE`, `TO_AUTO_STRING_NAME`); no `tmp`/`xx`/`data1`. No commented-out code blocks (the single comment in Main.kt is the SPEC-mandated hint). |
-| No anti-patterns | 5 | `grep -rn 'Thread.sleep|@Suppress("ALL")|catch (e: Exception) {}'` returns no hits across the plugin sources. No copy-pasted long blocks. |
+Plugin source files (≈ 130 lines of Kotlin, exclusive of `META-INF/services`):
 
-## Skill Adherence breakdown
+- `plugin/src/main/kotlin/com/example/autostringify/AutoStringifyNames.kt` — `PLUGIN_ID`, annotation `FqName`, `toAutoString` `Name`, and the `GeneratedDeclarationKey`.
+- `AutoStringifyFirDeclarationGenerator.kt` — `FirDeclarationGenerationExtension`. Predicate `annotated(AutoStringify)`, `getCallableNamesForClass` returns `{toAutoString}` only when matched, `generateFunctions` uses `createMemberFunction` with `returnType = session.builtinTypes.stringType.coneType`.
+- `AutoStringifyFirExtensionRegistrar.kt` — `+::AutoStringifyFirDeclarationGenerator`.
+- `AutoStringifyIrGenerationExtension.kt` — `IrElementTransformerVoidWithContext.visitFunctionNew`. Identifies the synthetic via `origin is IrDeclarationOrigin.GeneratedByPlugin && origin.pluginKey == AutoStringifyGeneratedDeclarationKey`. Fills the body with `irBlockBody { +irReturn(irConcat().apply { addArgument(...) }) }`, walking `parentClass.declarations.filterIsInstance<IrProperty>()` in declaration order and emitting `<ClassName>(name=...value..., ...)`. Property values are read via `irCall(property.getter!!.symbol).apply { arguments[0] = irGet(processed.dispatchReceiverParameter!!) }` — the unified-arguments form required by KT-68003 (Kotlin 2.2+).
+- `AutoStringifyCompilerPluginRegistrar.kt` — registers both `FirExtensionRegistrarAdapter` and `IrGenerationExtension`. Required `override val pluginId` for Kotlin 2.3+.
+- `AutoStringifyCommandLineProcessor.kt` — minimal (`pluginOptions = emptyList()`).
+- `META-INF/services/...CompilerPluginRegistrar` and `...CommandLineProcessor` — both files registered.
 
-| Sub-axis | Score | Notes |
-|---|---|---|
-| Recommended patterns | 5 | `AutoStringifyPluginNames.PLUGIN_ID` shared (`AutoStringifyPluginNames.kt:8`); `compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.3.20")` in `plugin/build.gradle.kts:10`; `@OptIn(ExperimentalCompilerApi::class)` on the registrar (`AutoStringifyComponentRegistrar.kt:11`) and CLI processor (`AutoStringifyCommandLineProcessor.kt:7`); `supportsK2 = true` (`AutoStringifyComponentRegistrar.kt:14`); `GeneratedDeclarationKey` is shared between FIR (passed to `createMemberFunction`) and IR (origin filter). |
-| Modern APIs | 5 | Uses `IrElementTransformerVoidWithContext` (`AutoStringifyIrGenerationExtension.kt:33`). DSL builders only (`irConcat`, `irBlockBody`, `irReturn`, `irString`, `irCall`, `irGet` from `org.jetbrains.kotlin.ir.builders`). `session.builtinTypes.stringType.coneType` for the return type — no deprecated `referenceClass`. `predicateBasedProvider.matches(PREDICATE, classSymbol)` for predicate evaluation. |
-| No invented/deprecated APIs | 5 | No `createParameterDeclarations`, no `dispatchReceiver = ...` setter, no `referenceClass`/`referenceFunctions`, no `getPluginArtifactForNative`, no `registerClassAsMetadataVisible`, no `KtDiagnosticFactoryToRendererMap` direct constructor. Property access uses `arguments[0] = irGet(processed.dispatchReceiverParameter!!)` (`AutoStringifyIrGenerationExtension.kt:55`) per KT-68003 unified arguments. `@file:OptIn(UnsafeDuringIrConstructionAPI::class)` correctly declared at line 1. |
-| Correct API forms | 5 | Predicate registered on `FirDeclarationPredicateRegistrar.registerPredicates()` of the extension (`AutoStringifyDeclarationGenerator.kt:24-26`), not on the registrar. `createMemberFunction(owner, key, name, returnType)` invoked with named args (`AutoStringifyDeclarationGenerator.kt:47-52`). `IrStringConcatenation` built via `irConcat()` and `addArgument(...)`. Origin filter checks `IrDeclarationOrigin.GeneratedByPlugin` then `origin.pluginKey == AutoStringifyGeneratedDeclarationKey` (lines 38-39). `getCallableNamesForClass` returns `setOf(TO_AUTO_STRING_NAME)` only when the predicate matches (lines 31-37). |
+The first compile failed with one error — `Unresolved reference 'transformChildrenVoid'`. Added `import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid` and the rest built cleanly. No IR-validation regression, no opt-in warning. Total iteration: one round of edits.
 
-## Anti-cheat findings
+## Skill effectiveness assessment
 
-None of the SPEC's "Common failure modes" triggered:
+The consolidated `kotlin-compiler-plugin` skill was sufficient to complete this task end-to-end. Concretely:
 
-1. `getCallableNamesForClass` IS implemented and predicate-gated (`AutoStringifyDeclarationGenerator.kt:31-37`). PASS.
-2. `GeneratedDeclarationKey` IS used and matched on the IR side via `IrDeclarationOrigin.GeneratedByPlugin.pluginKey` (`AutoStringifyIrGenerationExtension.kt:38-39`). PASS.
-3. `createMemberFunction(...)` IS used (`AutoStringifyDeclarationGenerator.kt:47`). PASS.
-4. IR body IS filled via `irBlockBody { ... +irReturn(concat) }` (`AutoStringifyIrGenerationExtension.kt:46-62`). PASS.
-5. Property values are read via property getter call (`irCall(getter.symbol)`), not raw `IrField` access. PASS.
-6. `IrStringConcatenation` produced via `irConcat()` plus `addArgument(...)`, not `+` chaining. PASS.
-7. `arguments[0] = irGet(dispatchReceiverParameter)` used, not deprecated `dispatchReceiver = ...` setter. PASS.
-8. `@file:OptIn(UnsafeDuringIrConstructionAPI::class)` declared at `AutoStringifyIrGenerationExtension.kt:1`. PASS.
+- The router `SKILL.md` made it immediate which sub-guides to load for FIR generation + IR body fill (the topic index points directly at the six guides this task needs).
+- `compiler-plugin-bootstrap/guide.md` gave the full Gradle layout, both `META-INF/services` files, the `compileOnly` warning, the `pluginId` requirement, and the `-Xplugin=` wiring. The example dir provided gradle wrapper + working build files to copy verbatim.
+- `fir-declaration-generation-extension/guide.md` showed the exact `createMemberFunction` signature, the `getCallableNamesForClass`/`generateFunctions` pair contract, and emphasised that the discovery method must list the name or generation is silently skipped. The `GeneratedDeclarationKey` companion pattern was demonstrated.
+- `ir-body-modification/guide.md` was the most load-bearing guide for this task. It documented:
+  - The `origin is IrDeclarationOrigin.GeneratedByPlugin && origin.pluginKey == ...` discriminator for matching the FIR-synthesised function.
+  - The `irConcat()` + `addArgument()` pattern, including the non-obvious import of `addArgument` from `org.jetbrains.kotlin.ir.expressions` (not `ir.builders`).
+  - The `arguments[0] = irGet(dispatchReceiverParameter!!)` form for getter calls (KT-68003).
+  - `parentAsClass` for navigating to the enclosing class and iterating `IrProperty` declarations.
 
-## Overall assessment
+## Skill-doc gaps (minor)
 
-A reference-quality submission. All 10 acceptance criteria pass, runtime output matches exactly, no IR validation errors. The implementation closely follows the documented patterns in `fir-declaration-generation-extension`, `ir-body-modification`, and `ir-plugincontext-usage` — including the unified-arguments form (`arguments[0] = irGet(...)`) and the `GeneratedByPlugin` origin check.
+1. **`transformChildrenVoid` import was not surfaced.** The `ir-body-modification` guide's "prepend a `println`" example calls `moduleFragment.transformChildrenVoid(...)` but the imports listed above the snippet don't include it. I had to discover `import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid` myself (the file's first build failed on this). Suggestion: add that import to the example's import block alongside the other `org.jetbrains.kotlin.ir.builders.*` imports.
 
-## Suggested skill fixes
+2. **No worked example of declaration-order property iteration.** The task needed properties "in declaration order, covering every constructor-property". The IR body guide mentions `irClass.declarations.filterIsInstance<IrProperty>()` in a single bullet, but doesn't explicitly note that this list mirrors the declaration order (which it does), nor that synthesised properties from data-class/serialization would also be included. For this benchmark that was fine; for real plugins authors may want a one-liner reassurance.
 
-None — no failures occurred. The agent's implementation matches the skill recommendations one-to-one.
+3. **`irConcat()` documentation could clarify what `addArgument` of a non-string IrExpression does.** The guide states `irConcat()` produces `IrStringConcatenation` and that `addArgument` is from `ir.expressions`, but it didn't spell out that adding an `IrCall` whose return type is `Int`/`Boolean`/etc. is fine — Kotlin's string template machinery handles `.toString()` conversion on each fragment at codegen. I had to take this on faith from the kotlinx-serialization analogy; the runtime output `Box(width=10, height=20, opaque=true)` confirmed it works for `Int` and `Boolean`. Suggestion: a single sentence "non-`String` arguments are converted via their `toString()` at codegen, so you can `addArgument(irCall(property.getter!!.symbol)...)` regardless of the property's static type" would have saved a moment of doubt.
+
+None of these gaps blocked completion; they are polish items.
+
+## Files of interest
+
+- `/tmp/kotlin-skill-eval-02-medium-auto-stringify-20260527-204058/work/plugin/src/main/kotlin/com/example/autostringify/AutoStringifyIrGenerationExtension.kt`
+- `/tmp/kotlin-skill-eval-02-medium-auto-stringify-20260527-204058/work/plugin/src/main/kotlin/com/example/autostringify/AutoStringifyFirDeclarationGenerator.kt`
+- `/tmp/kotlin-skill-eval-02-medium-auto-stringify-20260527-204058/work/sample/src/main/kotlin/com/example/app/Main.kt`
+- `/tmp/02-out.txt` — captured `:sample:run --rerun-tasks` output

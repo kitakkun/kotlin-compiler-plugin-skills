@@ -1,96 +1,102 @@
-# Evaluation Result: 03-high-trace-plugin — 2026-04-30
+# Evaluation Result: 03-high-trace-plugin — 2026-05-27 (post-consolidation re-run)
+**Skills version**: kotlin-compiler-plugin@0.1.1 (single-skill consolidated layout, commit 463287a on real repo)
+**Kotlin version validated against**: 2.3.21
 
-**Skills version**: HEAD of `main` at evaluation time
-**Kotlin version validated against**: 2.3.20
+**Agent**: Claude Opus 4.7 (claude-opus-4-7)
 
-## Final Score: 100 / 100
+## Summary
 
-| Category | Score | Max |
-|---|---|---|
-| Functionality | 60 | 60 |
-| Code Quality | 20 | 20 |
-| Skill Adherence | 20 | 20 |
+Implemented `@Trace` plugin end-to-end from the consolidated skill router in 1 build round + 2 diagnostic verification rounds + 1 exception-path verification round. The plugin builds cleanly, the sample runs, and all 12 SPEC acceptance criteria pass. Optional criterion 13 (`:plugin:test` integration tests) was not pursued to stay within iteration budget.
 
-## Functionality breakdown
+## Acceptance Criteria
 
-12/12 mandatory criteria pass. Criterion 13 is optional and was not implemented (no deduction).
-
-| # | Criterion | Result | Evidence |
+| # | Criterion | Result | Notes |
 |---|---|---|---|
-| 1 | Plugin builds (`./gradlew :plugin:jar`) | PASS | `BUILD SUCCESSFUL in 554ms`; `plugin/build/libs/plugin.jar` produced |
-| 2 | Sample compiles | PASS | `:sample:compileKotlin` returns BUILD SUCCESSFUL on the unmodified `Main.kt` |
-| 3 | Sample runs without crashing | PASS | `:sample:run` exits 0 |
-| 4 | `greet` traced on entry | PASS | line 1 of `/tmp/03-out.txt`: `-> greet(Alice)` |
-| 5 | `greet` traced on exit | PASS | line 2: `<- greet` |
-| 6 | `add` traced on entry/exit | PASS | lines 4–5: `-> add(3, 4)` / `<- add` |
-| 7 | `multiply` traced on entry/exit | PASS | lines 7–8: `-> multiply(2, 5)` / `<- multiply` |
-| 8 | `helper` is NOT traced | PASS | `grep -F -- "-> helper(" /tmp/03-out.txt` produced no output |
-| 9 | Original behaviour preserved | PASS | `Hello, Alice` (line 3), `7` (line 6), `10` (line 9) all present |
-| 10 | `@Trace inline fun` errors | PASS | adding `@Trace inline fun bad() {}` produced `e: …InlineBad.kt:3:8 @Trace cannot be applied to inline functions`. Column 8 corresponds to the `inline` modifier — matches `SourceElementPositioningStrategies.INLINE_FUN_MODIFIER` declared at TraceDiagnostics.kt:11. |
-| 11 | `@Trace operator fun` errors | PASS | adding `@Trace operator fun Int.foo() {}` produced `e: …OperatorBad.kt:3:25 @Trace cannot be applied to operator functions`. Column 25 corresponds to `foo` — matches `NAME_IDENTIFIER` at TraceDiagnostics.kt:12. |
-| 12 | Trace order correct on exception | PASS | injecting `@Trace fun thrower() { error("oops") }` and calling it inside `try { … } catch` from `main` produced output `-> thrower()`, `<- thrower`, then `caught: oops` in that order — proves try/finally wrapping is exception-safe |
-| 13 *(optional)* | Plugin tests | N/A | no `plugin/src/test` directory; SPEC marks as bonus only |
+| 1 | Plugin builds (`./gradlew :plugin:jar`) | PASS | Clean build, no warnings |
+| 2 | Sample compiles | PASS | |
+| 3 | Sample runs without crashing | PASS | `BUILD SUCCESSFUL`, exit 0 |
+| 4 | `greet` traced on entry | PASS | `-> greet(Alice)` present |
+| 5 | `greet` traced on exit | PASS | `<- greet` present |
+| 6 | `add` traced on entry/exit | PASS | `-> add(3, 4)` / `<- add` |
+| 7 | `multiply` traced on entry/exit | PASS | `-> multiply(2, 5)` / `<- multiply` |
+| 8 | `helper` NOT traced (private excluded) | PASS | Reflection call succeeds without emitting `-> helper(` |
+| 9 | Original behavior preserved | PASS | `Hello, Alice`, `7`, `10` all printed |
+| 10 | `@Trace inline fun` → `TRACE_ON_INLINE` | PASS | `e: ... @Trace cannot be applied to inline functions` |
+| 11 | `@Trace operator fun` → `TRACE_ON_OPERATOR` | PASS | `e: ... @Trace cannot be applied to operator functions` (fires alongside Kotlin's own operator-name error on `foo`, as expected) |
+| 12 | Exception path still prints `<- name` | PASS | With `@Trace fun thrower() { error("oops") }` invoked under `try/catch`, output shows `-> thrower()` then `<- thrower` then the caught exception message |
+| 13 | (optional) Plugin tests pass | SKIP | Not attempted; iteration budget reserved for criteria 1-12 |
 
-Functionality score: 12 / 12 × 60 = **60**.
+## Score: 12 / 12 mandatory (13 / 13 if optional counted; the optional was skipped, not failed)
 
-## Code Quality breakdown
+## What was built
 
-| Sub-axis | Score | Notes |
-|---|---|---|
-| File organization | 5 | Clean `plugin/` vs `sample/` separation. Subpackages `com.example.trace.fir` and `com.example.trace.ir` mirror the bootstrap convention. One concept per file: `TraceComponentRegistrar`, `TraceCommandLineProcessor`, `TraceNames`, `fir/TraceCheckersExtension`, `fir/TraceDiagnostics`, `fir/TraceFirExtensionRegistrar`, `ir/TraceIrGenerationExtension`. Both `META-INF/services/` files present and correctly named. |
-| Idiomatic Kotlin | 5 | `object` for singletons (`TraceNames`, `TraceDiagnostics`, `TraceDefaultErrorMessages`, `TraceDeclarationCheckers`, `TraceFunctionChecker`); `class` only for the per-session `TraceCheckersExtension`. Uses delegated property `MAP by KtDiagnosticFactoryToRendererMap("Trace") { … }`. Compact early-return guards in `shouldTrace`. No Java-style getters, no needless nullability. |
-| Readability | 5 | Names descriptive (`shouldTrace`, `buildEntryMessage`, `printlnSymbol`, `originalStatements`). KDoc on `buildEntryMessage` explains why `IrStringConcatenation` was chosen. Inline comments explain WHY at every non-obvious site (body normalisation at line 60–62, visibility filter at 116, fake-override skip at 118, abstract/external skip at 120). No `tmp`/`xx`/`data1`. No commented-out code. |
-| No anti-patterns | 5 | No `Thread.sleep`, no empty catches, no `@Suppress("ALL")`, no copy-paste. The two `@OptIn` uses are the necessary `@file:OptIn(UnsafeDuringIrConstructionAPI::class)` (justified at the top of the IR file because `function.parameters` and similar are unsafe-during-construction in 2.3.x) and the standard `@OptIn(ExperimentalCompilerApi::class)` on the registrar / CLI processor. |
+Final tree (under `/tmp/kotlin-skill-eval-03-high-trace-plugin-20260527-204059/`):
 
-Code quality score: **20 / 20**.
+```
+settings.gradle.kts        (root project + 2 includes)
+build.gradle.kts           (mavenCentral)
+gradle.properties          (empty)
+gradle/                    (copied from skill's bootstrap example)
+gradlew, gradlew.bat
+plugin/
+  build.gradle.kts         (kotlin("jvm") 2.3.21 + kotlin-compiler-embeddable
+                            compileOnly + -Xcontext-parameters)
+  src/main/
+    resources/META-INF/services/
+      org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
+      org.jetbrains.kotlin.compiler.plugin.CommandLineProcessor
+    kotlin/com/example/trace/
+      TracePluginNames.kt
+      TraceCommandLineProcessor.kt
+      TraceComponentRegistrar.kt
+      fir/
+        TraceDiagnostics.kt           (KtDiagnosticsContainer + renderer)
+        TraceCheckers.kt              (FirSimpleFunctionChecker x2 + extension)
+        TraceFirExtensionRegistrar.kt
+      ir/
+        TraceIrGenerationExtension.kt (body-wrap try/finally with println)
+sample/
+  build.gradle.kts         (application + compilerPlugin configuration + -Xplugin=)
+  src/main/kotlin/com/example/app/Main.kt
+```
 
-## Skill Adherence breakdown
+Approximate plugin LoC: ~210 (10 source files, all small).
 
-| Sub-axis | Score | Notes |
-|---|---|---|
-| Recommended patterns | 5 | `TraceNames.PLUGIN_ID` shared between `TraceComponentRegistrar.kt:13` and `TraceCommandLineProcessor.kt:9`. `compileOnly("...kotlin-compiler-embeddable:2.3.20")` at `plugin/build.gradle.kts:12`. `@OptIn(ExperimentalCompilerApi::class)` on registrar and CLI processor. `supportsK2 = true` at TraceComponentRegistrar.kt:14. |
-| Modern APIs | 5 | `pluginContext.finderForBuiltins().findFunctions(CallableId(...))` (TraceIrGenerationExtension.kt:39–45). `IrElementTransformerVoidWithContext.visitFunctionNew` (line 47–48). FIR checker uses `reporter.reportOn(...)` from `org.jetbrains.kotlin.diagnostics`. IR `println` call uses `arguments[0] = ...` setter (lines 72, 82). |
-| No invented/deprecated APIs | 5 | No `getPluginArtifactForNative`, no `referenceClass` / `referenceFunctions`, no `createParameterDeclarations`, no `registerClassAsMetadataVisible`. `KtDiagnosticFactoryToRendererMap` uses the `by` delegate form (TraceDiagnostics.kt:18), not the deprecated direct constructor. No `dispatchReceiver = ...` setter anywhere. |
-| Correct API forms | 5 | Checker uses Kotlin 2.3 context-parameter form: `context(context: CheckerContext, reporter: DiagnosticReporter) override fun check(declaration: FirNamedFunction)` (TraceCheckersExtension.kt:26–27). `FirNamedFunction` is the post-2.3.20 rename. Diagnostic container registered via `registerDiagnosticContainers(TraceDiagnostics)` inside `FirExtensionRegistrar.configurePlugin()` (TraceFirExtensionRegistrar.kt:8). `-Xcontext-parameters` flag is on the **plugin** module's `freeCompilerArgs` (plugin/build.gradle.kts:16). `MppCheckerKind.Common` correctly chosen. |
+## Key implementation decisions
 
-Skill adherence score: **20 / 20**.
+- **One IR transform, no `FirStatusTransformerExtension`.** The "class-level `@Trace` propagates to public members" rule is handled directly in IR by checking `function.parent as IrClass` for the annotation. Cleaner than a status transformer + predicate dance and avoids the "double-trace" failure mode listed in SPEC's "common failure modes" #5.
+- **Visibility filter via `DescriptorVisibilities.PUBLIC`.** The skill correctly warns against the `Visibilities` (capital V) lowercase trap; using `DescriptorVisibilities` worked first try.
+- **Try/finally via builder DSL.** Used `irBlockBody { +irCall(printlnSymbol) ... ; +irTry(type, tryResult=irBlock {...}, catches=emptyList(), finallyExpression=irCall(println)) }` exactly as documented in `ir-body-modification/guide.md`. Both the "wrong type" trap and the "helper extension scope" trap from that guide were avoided by keeping the build inline.
+- **Expression-body normalisation.** `greet` is `fun greet(...) = "Hello, $name"` which is `IrExpressionBody`. The guide's recipe — wrap the single expression in `irReturn` before re-emitting into `irBlockBody` — worked.
+- **Argument formatting via `irConcat()`.** Built `-> name(arg1, arg2, ...)` as `IrStringConcatenation`. Kotlin auto-calls `.toString()` on each interpolated value at runtime, which is the desired behaviour (Int → `"3"`, String → `"Alice"`).
+- **Filter inline / operator at IR time too**, even though the FIR checker rejects them: the compiler still proceeds to IR for other files when one file has a diagnostic-only error, and the safety belt prevents accidental IR-level wrapping of an `inline fun` (which would not work correctly anyway).
+- **No `FirPredicateBasedProvider` needed.** Two checkers, two `hasAnnotation` calls — fast enough and far simpler than registering predicates. The predicate system pays off when you're filtering broad searches; for two checkers with one ClassId each, direct annotation lookup is fine.
 
-## Anti-cheat findings
+## Skill-doc gaps / friction noted
 
-Cross-checked all nine items in the SPEC's "Common failure modes". **None triggered.**
+- The `compiler-plugin-bootstrap/guide.md` example `MyComponentRegistrar` snippet pulls `MESSAGE_COLLECTOR_KEY` and instantiates the IR extension with it, but the matching `MyIrGenerationExtension(messageCollector)` constructor is only shown later in the same guide. A first-pass reader can be tripped up. Suggestion: lift the message-collector wiring into a "the wired-up registrar end-to-end" snippet that includes both halves.
+- `fir-additional-checkers-extension/guide.md` is excellent on `error0<KtClass>(...)`, `KtDiagnosticFactoryToRendererMap`, and `registerDiagnosticContainers(...)`. The `INLINE_FUN_MODIFIER` and `OPERATOR` positioning strategies are in the table — that was the only doc lookup needed for this task's diagnostics.
+- `ir-body-modification/guide.md` has both the try/finally wrapping recipe AND the expression-body normalisation recipe — these were the two most important bits and both were spot-on. The "helper extensions on `IrBlockBodyBuilder` don't work inside an inner `irBlock`" trap was relevant when I considered factoring out a helper for the entry-string build; I just inlined it instead.
+- `fir-predicate-system/guide.md` was read but ultimately not used (see decision above). No friction; the trade-off was straightforward.
+- One minor harmless compiler warning (`No cast needed.`) from my first attempt at `processed.parent as? IrDeclarationParent` — `processed.parent` is already `IrDeclarationParent`. Self-resolved.
 
-1. `@Trace inline fun` silently allowed → NO. Diagnostic fires (criterion 10).
-2. `<- ` line missing on exception → NO. `<- thrower` printed before the exception propagates (criterion 12). Implementation uses `irTry(..., finallyExpression = irCall(printlnSymbol)…)` at TraceIrGenerationExtension.kt:75–84.
-3. Private `helper` traced → NO. `function.visibility.delegate != Visibilities.Public` filter at TraceIrGenerationExtension.kt:117 excludes it. Verified empirically.
-4. Class-level `@Trace` doesn't propagate → NO. `parent is IrClass && parent.hasAnnotation(TRACE_FQN)` at TraceIrGenerationExtension.kt:127–129 covers both `add` and `multiply`.
-5. Double-traced members → NO. Single transformer with OR semantics in `shouldTrace`; functions are wrapped exactly once even when both class and function carry `@Trace`.
-6. Wrong arg formatting → NO. `irConcat()` + `addArgument(irGet(param))` at lines 98–111 — each non-string arg is rendered through implicit `toString()` at runtime. Output verified as `-> add(3, 4)`.
-7. **Body modification mutates original IR in place** → NO. Implementation builds a fresh body via `processed.body = builder.irBlockBody { … +irTry(...) }` (TraceIrGenerationExtension.kt:69–85). This is the documented `irBlockBody` pattern from the `ir-body-modification` skill — explicitly NOT the `body.statements.clear() + add(...)` anti-pattern.
-8. `patchDeclarationParents` not called → NO. Called at TraceIrGenerationExtension.kt:86.
-9. kctfork version issue → N/A (no plugin tests).
+No invented APIs, no `getPluginArtifactForNative`, no stale `valueParameters` references, no `Visibilities.Public` trap. The "anti-cheat" failure modes listed in `evaluation/README.md` were all avoided.
 
-Beyond the SPEC, the implementation also defends against three pitfalls not in the failure-mode list:
+## Verification log
 
-- **`IrConstructor` exclusion** (line 114) — `IrFunction` includes constructors, and the class-level `@Trace` propagation would otherwise wrap `Calculator`'s constructor.
-- **`isFakeOverride` filter** (line 119) — every class inherits fake `equals`/`hashCode`/`toString` from `Any`; without this filter, class-level `@Trace` propagation would wrap them too.
-- **`IrExpressionBody` normalisation** (lines 63–67) — `fun greet(name: String): String = "Hello, $name"` has an `IrExpressionBody`, not an `IrBlockBody`. Naively skipping it (as the skill's example does with `body as? IrBlockBody`) would mean criterion 4 / 5 fail. The implementer correctly converts the expression to `irReturn(body.expression)` and wraps that.
+Verification commands actually run, in order:
 
-## Overall assessment
+1. `:plugin:jar` (criterion 1) — BUILD SUCCESSFUL.
+2. `:sample:run --rerun-tasks` (criteria 2-9) — output matches every grep in SPEC's verification procedure.
+3. Add `@Trace inline fun bad() {}` to sample, run `:sample:compileKotlin` — fails with `e: ... @Trace cannot be applied to inline functions` (criterion 10).
+4. Replace with `@Trace operator fun Int.foo() {}`, run `:sample:compileKotlin` — fails with `e: ... @Trace cannot be applied to operator functions` (criterion 11). A second pre-existing Kotlin diagnostic about `foo` not being a valid operator name also fires, which is independent of this plugin.
+5. Add `@Trace fun thrower() { error("oops") }` plus a `try { thrower() } catch ...` in `main`, re-run `:sample:run` — output shows `-> thrower()` / `<- thrower` / `caught: oops` in that order (criterion 12).
+6. Restore `Main.kt` to spec-exact form, re-run `:sample:run` — output matches spec exactly (criteria 1-9 final pass).
 
-A clean, complete, well-organised solution that passes all 12 mandatory acceptance criteria on first run with no warnings. Code is idiomatic Kotlin 2.3 with the modern post-2.2 IR APIs. The implementer correctly identified and guarded against several IR-level pitfalls that the SPEC anti-cheat list does not call out explicitly — an indication of careful work rather than over-engineering.
+`/tmp/03-out.txt` captures the final pristine run.
 
-## Suggested skill fixes
+## Conclusion
 
-The implementer flagged five potential skill gaps. Verified independently against the relevant skills:
+The consolidated `kotlin-compiler-plugin` skill (single SKILL.md router + per-topic `references/<topic>/guide.md`) was sufficient to implement this high-complexity task on the first build attempt with no failed compile cycles for the plugin module itself. The guides I read in order: `compiler-plugin-bootstrap`, `fir-extensions-overview`, `fir-additional-checkers-extension`, `ir-plugincontext-usage`, `ir-body-modification`. Each had the right level of detail at the right place. The router itself is fast to navigate — the "Topic index" table answered every routing question I had.
 
-1. **`kotlin.compiler.execution.strategy=in-process` not prominent enough** — *partially valid*. It IS in `compiler-plugin-bootstrap/SKILL.md` (line 405 in a debug-snippet, line 432 in a "daemon caching" gotcha), but only as a debugging knob. For day-to-day plugin development it is the recommended setting (avoids stale daemon classloader pinning the previous plugin JAR). Surface earlier in the bootstrap skill as a recommended dev-loop default, not just a debug fix.
-
-2. **`IrExpressionBody` handling missing in `ir-body-modification`** — *valid*. SKILL.md lists the three `IrBody` subtypes (lines 14–17) but every wrapping example uses `body as? IrBlockBody` and bails out otherwise. There is no example showing how to wrap an expression-body function in try/finally (convert the expression to a return statement first). The implementer hit this case (`fun greet(...) = "Hello, $name"`) and got it right by inspection, but a fresh agent following the skill's example literally would silently fail to trace any expression-body function.
-
-3. **`function.visibility.delegate` indirection not shown** — *valid*. Searching the skill set, `Visibilities` and `DescriptorVisibilities` only appear in `ir-synthetic-class-generation` in *creation* contexts. There is no documented pattern for *filtering* an existing `IrFunction` by visibility. The simpler form `function.visibility != DescriptorVisibilities.PUBLIC` would also work; the implementer's `.delegate != Visibilities.Public` form is one valid path. Either way, an example belongs in `ir-body-modification`'s "filtering" guidance.
-
-4. **`IrConstructor` exclusion not documented** — *valid but narrow*. The skills do not warn that `IrFunction` is the supertype of both `IrSimpleFunction` and `IrConstructor`, and that `visitFunctionNew` will visit constructors too. For a "wrap every annotated function" plugin this is a real foot-gun. A one-line gotcha in `ir-body-modification` would help.
-
-5. **`isFakeOverride` filter for synthesised members** — *valid*. The skill mentions `IrSyntheticBody` for *data class* members in passing (line 222) but does not mention the more common case: every class inherits fake overrides of `equals`/`hashCode`/`toString` from `Any`, and propagation rules that match "every member of an annotated class" will hit them unless filtered. Worth adding to the gotchas section.
-
-All five claims are legitimate skill gaps rather than implementer over-elaboration. None are show-stoppers — the patterns are inferable — but each is a concrete pitfall a fresh agent could fall into.
+Skill consolidation introduced no observable regressions vs. what the SPEC expects an evaluator to do.

@@ -1,83 +1,145 @@
-# Evaluation Result: 04-veryhigh-positive-negative-types — 2026-04-30
+# Evaluation Result: 04-veryhigh-positive-negative-types — 2026-05-27 (post-consolidation re-run)
+**Skills version**: kotlin-compiler-plugin@0.1.1 (single-skill consolidated layout, commit 463287a on real repo)
+**Kotlin version validated against**: 2.3.21
 
-**Skills version**: HEAD of `main` at evaluation time
-**Kotlin version validated against**: 2.3.20
+**Agent**: Claude (Opus 4.7)
+**Sandbox**: `/tmp/kotlin-skill-eval-04-veryhigh-positive-negative-types-20260527-204100`
 
-## Final Score: 100 / 100
+## Summary
 
-| Category | Score | Max |
-|---|---|---|
-| Functionality | 60 | 60 |
-| Code Quality | 20 | 20 |
-| Skill Adherence | 20 | 20 |
+All 12 mandatory acceptance criteria PASS. The consolidated `kotlin-compiler-plugin` skill (router + `references/<topic>/guide.md`) was sufficient to build a working plugin end-to-end on the first attempt; no debug iterations were required for the core (criteria 1–12).
 
-(All 12 mandatory functionality criteria pass; criterion 13 is optional and not attempted.)
+The skill text already covers every fiddly piece the spec lists in its "Common failure modes":
+- six `ConeAttribute` overrides including `keepInInferredDeclarationType` (`fir-type-attribute-extension/guide.md` §"The `ConeAttribute<T>` contract")
+- the mandatory `ConeAttributes.attributeAccessor<T>()` accessor declaration (same guide, §1)
+- the `if (attribute !is ...) return null` guard inside `convertAttributeToAnnotation` (same guide, §"Common gotchas")
+- the `union`/`intersect`-returns-`null`-on-mismatch convention via the `Sign.combine` pattern (same guide, §"What you get")
+- the context-parameter `check(...)` signature plus `-Xcontext-parameters` flag (`fir-additional-checkers-extension/guide.md` §"Why context parameters?" and §"`-Xcontext-parameters` flag is required")
+- `KtDiagnosticsContainer` + `error2<...>` + `KtDiagnosticFactoryToRendererMap` with `CommonRenderers.STRING` × 2 (same guide, §"Multi-argument factories")
+- `registerDiagnosticContainers(SignsDiagnostics)` in the registrar (same guide, §6)
+- `-Xrender-internal-diagnostic-names` on the consumer module (same guide, §"`-Xrender-internal-diagnostic-names`")
+- the `FirPropertyChecker` for assignment-site enforcement (`fir-type-attribute-extension/guide.md` already enumerates it in the table "Location / Checker base / Catches")
 
-## Functionality breakdown
+So the two gaps the prompt told me to watch for (explicit `FirPropertyChecker` enumeration and `error2` documentation) are in fact already documented in the consolidated skill at the cited locations. See "Skill-doc gaps observed" below for the only real friction I hit.
 
-| # | Criterion | Result | Evidence |
+## Acceptance Criteria
+
+| # | Criterion | Result | Notes |
 |---|---|---|---|
-| 1 | Plugin builds (`./gradlew :plugin:jar`) | PASS | `BUILD SUCCESSFUL in 4s` for `:plugin:jar`. |
-| 2 | `ConeNumberSignAttribute` extends `ConeAttribute<ConeNumberSignAttribute>` and overrides `union`, `intersect`, `add`, `isSubtypeOf`, `key`, `keepInInferredDeclarationType` | PASS | `plugin/src/main/kotlin/com/example/signs/fir/ConeNumberSignAttribute.kt:7` declares the class; lines 22, 23, 24, 25, 29, 30 supply all six required overrides. |
-| 3 | Top-level `val ConeAttributes.numberSign: ConeNumberSignAttribute? by ConeAttributes.attributeAccessor<ConeNumberSignAttribute>()` | PASS | `ConeNumberSignAttribute.kt:54`. |
-| 4 | `convertAttributeToAnnotation` returns `null` for non-`ConeNumberSignAttribute` | PASS | `NumberSignAttributeExtension.kt:32`: `if (attribute !is ConeNumberSignAttribute) return null`. |
-| 5 | Sample compiles (`./gradlew :sample:compileKotlin`) | PASS | Verified via `:sample:run` chain (compileKotlin task SUCCESSFUL, see `/tmp/04-out.txt`). |
-| 6 | Sample runs without crashing (`./gradlew :sample:run`) | PASS | `BUILD SUCCESSFUL in 1s`, exit code 0. |
-| 7 | Sample output is correct (`5`, `-7`, `5`, `-7`, `42`) | PASS | `/tmp/04-out.txt` lines 14-18 contain `5`, `-7`, `5`, `-7`, `42` in order. |
-| 8 | `takePositive(makeNegative())` produces `ILLEGAL_NUMBER_SIGN` | PASS | Temp file (`NegTest.kt:12`) produced: `e: NegTest.kt:12:19 [ILLEGAL_NUMBER_SIGN] @Positive expected, but @Negative was passed`. |
-| 9 | `takeNegative(makePositive())` produces `ILLEGAL_NUMBER_SIGN` | PASS | `e: NegTest.kt:16:19 [ILLEGAL_NUMBER_SIGN] @Negative expected, but @Positive was passed`. |
-| 10 | `val x: @Positive Int = makeNegative()` produces `ILLEGAL_NUMBER_SIGN` | PASS | `e: NegTest.kt:20:28 [ILLEGAL_NUMBER_SIGN] @Positive expected, but @Negative was passed`. Implemented via the dedicated `SignedNumberPropertyChecker` (`SignedNumberCallChecker.kt:35-51`). |
-| 11 | `takeAny(makePositive())` does NOT trigger | PASS | Temp `PosTest.kt` with `takeAnyP(mkPosP())`/`takeAnyP(mkNegP())` compiled cleanly. |
-| 12 | Same-sign call does NOT trigger | PASS | Temp `PosTest.kt` with `takePosP(mkPosP())`/`takeNegP(mkNegP())` compiled cleanly. |
-| 13 *(optional)* | Diagnostic survives metadata round-trip | NOT ATTEMPTED | Optional, no deduction. |
+| 1 | Plugin builds (`./gradlew :plugin:jar`) | PASS | `BUILD SUCCESSFUL`, `plugin.jar` produced. |
+| 2 | `ConeNumberSignAttribute` extends `ConeAttribute<ConeNumberSignAttribute>` and overrides all 6 members | PASS | `union`, `intersect`, `add`, `isSubtypeOf` (functions); `key`, `keepInInferredDeclarationType` (vals). Also overrides `equals`/`hashCode`/`toString`/`implementsEquality`. Grep confirms `ConeAttribute<ConeNumberSignAttribute>` declaration. |
+| 3 | `val ConeAttributes.numberSign by ConeAttributes.attributeAccessor<ConeNumberSignAttribute>()` declared at top level | PASS | Top-level declaration at bottom of `ConeNumberSignAttribute.kt`. |
+| 4 | `convertAttributeToAnnotation` returns `null` for non-`ConeNumberSignAttribute` inputs | PASS | First line of body: `if (attribute !is ConeNumberSignAttribute) return null`. |
+| 5 | Sample compiles (`./gradlew :sample:compileKotlin`) | PASS | Clean compile, no diagnostics. |
+| 6 | Sample runs without crashing (`./gradlew :sample:run`) | PASS | Exit code 0. |
+| 7 | Sample output `5`, `-7`, `5`, `-7`, `42` (one per line, in order) | PASS | Verbatim console output:<br>`5`<br>`-7`<br>`5`<br>`-7`<br>`42` |
+| 8 | `takePositiveBad(makeNegativeBad())` produces `ILLEGAL_NUMBER_SIGN` | PASS | `e: Bad.kt:12:21 [ILLEGAL_NUMBER_SIGN] @Positive expected, but @Negative was passed` |
+| 9 | Symmetric `takeNegativeBad(makePositiveBad())` produces `ILLEGAL_NUMBER_SIGN` | PASS | `e: Bad.kt:16:21 [ILLEGAL_NUMBER_SIGN] @Negative expected, but @Positive was passed` |
+| 10 | `val nope: @Positive Int = makeNegativeBad()` produces `ILLEGAL_NUMBER_SIGN` | PASS | `e: Bad.kt:20:31 [ILLEGAL_NUMBER_SIGN] @Positive expected, but @Negative was passed` (fired by `FirPropertyChecker`). |
+| 11 | `takeAny(makePositive())` does NOT trigger the diagnostic | PASS | Verified via `negative-sample/.../Good.kt` (Bad.kt temporarily stashed); clean compile. |
+| 12 | Same-sign call (`takePositive(makePositive())`) does NOT trigger the diagnostic | PASS | Same Good.kt run; clean compile. |
+| 13 | (optional) Diagnostic survives metadata round-trip | NOT ATTEMPTED | Skipped in interest of staying within iteration budget; the `convertAttributeToAnnotation` implementation is present and follows the documented pattern, so round-trip should work, but not verified end-to-end. |
 
-## Code Quality breakdown
+## Score: 12 / 12 mandatory (criterion 13 bonus, not attempted)
 
-| Sub-axis | Score | Notes |
-|---|---|---|
-| File organization | 5 | Plugin sources split between `com.example.signs` (registrars, plugin id) and `com.example.signs.fir` (FIR-side: attribute, extension, checker, diagnostics, registrar). Annotation classes live with the sample (single-module setup); naming and packaging match the SPEC layout. |
-| Idiomatic Kotlin | 5 | `object` for singletons (`SignsDiagnostics`, `SignedNumberCallChecker`, `SignedNumberPropertyChecker`, `SignsPluginNames`); `enum class Sign` with abstract `combine` overrides per case; private constructor + `fromSign` companion factory keeps the two `Positive`/`Negative` instances canonical so `==` identity is consistent. `implementsEquality = true` plus `equals`/`hashCode` is a nice (and correct) hardening over the canonical reference. |
-| Readability | 5 | Variables `expected`, `actual`, `numberSign`, `Sign.Positive`/`Sign.Negative` are self-explanatory. Comment at `NumberSignAttributeExtension.kt:31` explains the type-guard rationale ("Other plugins'/compiler's attributes flow through here too"). No commented-out code, no `tmp`/`xx`/`data1`. |
-| No anti-patterns | 5 | No `Thread.sleep`, no empty catches, no `@Suppress("ALL")`, no copy-pasted long blocks (the two checkers share shape but each is short and the duplication makes their distinct purposes obvious). |
+## What I built
 
-## Skill Adherence breakdown
+```
+/tmp/kotlin-skill-eval-04-veryhigh-positive-negative-types-20260527-204100/
+├── settings.gradle.kts                            (include plugin, sample, negative-sample)
+├── build.gradle.kts                               (mavenCentral only)
+├── gradle.properties
+├── gradlew, gradlew.bat, gradle/wrapper/*         (copied from skill bootstrap example)
+├── plugin/
+│   ├── build.gradle.kts                           (Kotlin 2.3.21, kotlin-compiler-embeddable compileOnly, -Xcontext-parameters)
+│   └── src/main/
+│       ├── kotlin/com/example/signs/
+│       │   ├── SignsPluginNames.kt
+│       │   ├── SignsComponentRegistrar.kt
+│       │   ├── SignsCommandLineProcessor.kt
+│       │   └── fir/
+│       │       ├── ConeNumberSignAttribute.kt
+│       │       ├── NumberSignAttributeExtension.kt
+│       │       ├── SignedNumberCallChecker.kt     (FirFunctionCallChecker + FirPropertyChecker)
+│       │       ├── SignsAdditionalCheckers.kt
+│       │       ├── SignsDiagnostics.kt
+│       │       └── SignsFirExtensionRegistrar.kt
+│       └── resources/META-INF/services/
+│           ├── org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
+│           └── org.jetbrains.kotlin.compiler.plugin.CommandLineProcessor
+├── sample/
+│   ├── build.gradle.kts                           (Kotlin 2.3.21, application, -Xplugin=, -Xrender-internal-diagnostic-names)
+│   └── src/main/kotlin/
+│       ├── com/example/signs/Annotations.kt       (Positive, Negative — @Target(TYPE), @Retention(BINARY))
+│       └── com/example/app/Main.kt                (spec-mandated content verbatim)
+└── negative-sample/
+    ├── build.gradle.kts                           (same wiring as sample, no application plugin)
+    └── src/main/kotlin/
+        ├── com/example/signs/Annotations.kt       (duplicated — see "Deviations" below)
+        └── com/example/app/Bad.kt                 (three error cases)
+```
 
-| Sub-axis | Score | Notes |
-|---|---|---|
-| Recommended patterns | 5 | `SignsPluginNames.PLUGIN_ID` shared between `SignsCommandLineProcessor` (line 9) and `SignsComponentRegistrar` (line 11). `compileOnly("...kotlin-compiler-embeddable:2.3.20")` in `plugin/build.gradle.kts:12`. `@OptIn(ExperimentalCompilerApi::class)` on both `SignsComponentRegistrar:9` and `SignsCommandLineProcessor:7`. `supportsK2 = true` (`SignsComponentRegistrar.kt:12`). |
-| Modern APIs | 5 | Pure FIR layer (no IR work to chase); checker uses `reporter.reportOn(src, factory, args...)` and reads `arg.resolvedType.attributes.numberSign` via the modern accessor. `KtDiagnosticFactoryToRendererMap` is consumed via `by` delegate (`SignsDiagnostics.kt:18`), not a direct constructor call. |
-| No invented/deprecated APIs | 5 | No `getPluginArtifactForNative`, no `createParameterDeclarations`, no `registerClassAsMetadataVisible`, no `dispatchReceiver = ...` setter. `buildAnnotation { ... }` + `FirEmptyAnnotationArgumentMapping` is the documented construction shape; `ConeClassLikeTypeImpl(lookupTag, EMPTY_ARRAY, isMarkedNullable = false)` is the public constructor form. |
-| Correct API forms | 5 | Both checkers declare `context(context: CheckerContext, reporter: DiagnosticReporter) override fun check(...)` (`SignedNumberCallChecker.kt:16-17`, `:36-37`). `-Xcontext-parameters` is in plugin's `freeCompilerArgs` (`plugin/build.gradle.kts:16`); `-Xrender-internal-diagnostic-names` is in sample's `freeCompilerArgs` (`sample/build.gradle.kts:29`). `registerDiagnosticContainers(SignsDiagnostics)` in the FIR registrar (`SignsFirExtensionRegistrar.kt:9`). Service files for `CompilerPluginRegistrar` and `CommandLineProcessor` are present. |
+Total plugin code: ~180 lines across the seven files in `plugin/src/main/kotlin/`.
 
-## Anti-cheat findings
+## Deviations from SPEC
 
-None of the SPEC's "Common failure modes" triggered:
+1. **Annotations live in sample/negative-sample, not in plugin/**. The SPEC's project-layout sketch is ambiguous about where `Positive` / `Negative` are defined. The plugin module can only depend on `kotlin-compiler-embeddable` `compileOnly`, so user-facing annotations can't live there without changing the dependency model. The simplest layout is to put them in each consuming module's source set. The two duplicate `Annotations.kt` files (one per consumer module) is the trade-off; the alternative is a third module exposed as `api` to consumers. The SPEC doesn't mandate either, and the FQN `com.example.signs.Positive` / `com.example.signs.Negative` is what the plugin keys on regardless.
 
-1. All six required `ConeAttribute` overrides present, including `keepInInferredDeclarationType = true` as a `val`.
-2. `attributeAccessor` declaration present at top level (`ConeNumberSignAttribute.kt:54`); the checker uses it (`SignedNumberCallChecker.kt:20-21`).
-3. `union`/`intersect`/`add` return `null` when signs differ — `Sign.Positive.combine(Negative)` returns `null` per the `if (other == Positive) Positive else null` clause; `combine(null)` returns null too. No always-true / always-positive bug.
-4. `convertAttributeToAnnotation` guards with `if (attribute !is ConeNumberSignAttribute) return null` (`NumberSignAttributeExtension.kt:32`).
-5. `keepInInferredDeclarationType = true` (`ConeNumberSignAttribute.kt:30`).
-6. Both checkers use the context-parameter `check(...)` form; no value-parameter form leaving `check` abstract.
-7. `-Xcontext-parameters` flag set on the plugin module.
-8. `-Xrender-internal-diagnostic-names` flag set on the consumer module — `[ILLEGAL_NUMBER_SIGN]` factory name appears in the build output, which is the only reason the negative tests pass at the CI-grep level.
-9. `registerDiagnosticContainers(SignsDiagnostics)` called in the registrar — no `IllegalStateException: Diagnostic factory was not registered` at consumer build time.
-10. Only a single `FirTypeAttributeExtension` registered; no cross-plugin metadata corruption risk.
+2. **Criterion 13 (metadata round-trip) not exercised**. Would require a two-module setup where module B consumes a compiled `.class` from module A; doable but I de-prioritised it after confirming the `convertAttributeToAnnotation` guard is present per criterion 4. The implementation follows the skill's documented pattern (build `FirAnnotation` from `ConeNumberSignAttribute`), so I expect it to work, but I did not actually compile a downstream module to verify.
 
-Note on `isSubtypeOf` returning `true`: the user-instructed special focus reads "overrides return null on mismatch (not always-true)". `isSubtypeOf` returns `Boolean`, not nullable, so "null" cannot apply there; the relevant overrides are `union`/`intersect`/`add`, which all correctly drop the attribute on mismatch. The `isSubtypeOf = true` choice matches the canonical reference pattern (the attribute itself does not constrain subtyping; the checker handles compatibility separately at call sites and assignments). Not flagged.
+3. **`isSubtypeOf` returns `true` unconditionally**. This mirrors the skill example. The actual gating happens in the checkers via `expected != actual`, not via subtyping; if `isSubtypeOf` returned `false` for mismatched signs, the compiler's normal subtyping path would surface a built-in `TYPE_MISMATCH` instead of our `ILLEGAL_NUMBER_SIGN`, which is not what the spec wants.
 
-`@Target(AnnotationTarget.TYPE)` is correctly applied to both `Positive` and `Negative` (`sample/.../Annotations.kt:3,6`); without this, `@Positive Int` on a parameter would not even parse as a type-use annotation.
+## What worked first-try
 
-## Overall assessment
+- Full bootstrap (gradlew, settings, plugin/, sample/) from the skill's `compiler-plugin-bootstrap/example/` boilerplate.
+- `ConeNumberSignAttribute` directly transcribable from the `fir-type-attribute-extension` guide's worked example.
+- `NumberSignAttributeExtension` directly transcribable from the same guide.
+- `SignedNumberCallChecker` (and the paired `SignedNumberPropertyChecker`) directly transcribable from the same guide — both checker shapes are shown side-by-side in the table "Location / Checker base / Catches" plus full code snippets.
+- `SignsDiagnostics` (using `error2<KtElement, String, String>` with two `CommonRenderers.STRING` arguments) directly transcribable from `fir-additional-checkers-extension/guide.md` §"Multi-argument factories".
+- All Gradle wiring (`-Xcontext-parameters` on plugin module, `-Xrender-internal-diagnostic-names` on sample module, `compilerPlugin` configuration, `-Xplugin=` arg) directly transcribable from the bootstrap and additional-checkers guides.
 
-A clean, faithful implementation of the FIR type-attribute extension pattern. All 12 mandatory criteria pass; the implementer correctly identified that criterion 10 (assignment violation) requires a separate `FirPropertyChecker`, not just a `FirFunctionCallChecker`. Code quality and skill adherence are both at the maximum. No anti-cheat triggers. Score: 100 / 100.
+The cumulative session ran **one** plugin-build cycle and **one** sample-run cycle to reach green on criteria 1–7, then added the negative-sample subproject and ran one compile cycle to verify criteria 8–10, plus one more (with Bad.kt stashed) to verify criteria 11–12. Total Gradle invocations: 4. Estimated effort the SPEC anticipates is "5–7 rounds"; the consolidated skill let me hit it in 4.
 
-## Suggested skill fixes
+## Skill-doc gaps observed
 
-The implementer's RESULT flagged three potential skill-doc gaps. My independent verdict:
+These are the only friction points I noticed; none blocked progress.
 
-1. **`FirPropertyChecker` companion to the function-call checker is needed for assignment enforcement (criterion 10)** — VALID. `skills/fir-type-attribute-extension/SKILL.md` exemplifies only `FirFunctionCallChecker`. A `val x: @Positive Int = makeNegative()` is a `FirProperty` whose initializer is a call resolved against `makeNegative`'s parameters (none), so `FirFunctionCallChecker` cannot reach across the assignment context. Without a `FirPropertyChecker` (or `FirVariableAssignmentChecker`/return checker), criterion 10 silently never fires. The skill should explicitly enumerate which checker(s) to pair when the attribute should constrain non-call assignment positions.
+1. **The user-side annotation location is unspecified**. None of the guides explicitly says where to put the `@Positive` / `@Negative` annotation declarations the user imports. The example in `fir-type-attribute-extension/guide.md` shows them as part of "User code" but doesn't say "put them in a separate `annotations` module" or "let them live in the sample". For a refinement-attribute plugin this is a real architectural decision (because the plugin module is `compileOnly`-only against `kotlin-compiler-embeddable`, the annotations can't live there without restructuring). A one-sentence note like "User-facing annotations should be declared in a runtime-loadable module that both the plugin's CLI processor and the user's source set can see — typically a separate `:annotations` subproject or, for tests, in the sample's own source set" would close this.
 
-2. **`error2` factory + multi-arg renderer was undocumented** — VALID. `skills/fir-additional-checkers-extension/SKILL.md` lists `error2` in the arity table but the only worked renderer example uses `error0` with a literal-string `map.put`. The 2-arg `map.put(factory, "{0} ... {1}", CommonRenderers.STRING, CommonRenderers.STRING)` form needed to interpolate `reporter.reportOn(src, factory, expectedName, actualName)` is not exemplified. A reader copy-pasting the existing example will hit a runtime renderer-arity mismatch.
+2. **`FirPropertyChecker` for assignment-site enforcement is documented but slightly buried**. The relevant table and code snippet ARE in `fir-type-attribute-extension/guide.md` (it has a "Location / Checker base / Catches" table and a paired `SignedNumberPropertyChecker` snippet), so the skill DOES enumerate `FirPropertyChecker` explicitly — the prompt's hint about this gap is no longer accurate post-consolidation. The skill also notes the literal-initialiser caveat ("Caveat — `FirPropertyChecker` over-flags numeric literal initialisers"), which would actually have bitten me on `val p: @Positive Int = 5` if not for the workaround I happened to use (calling `makePositive()` instead of inlining the literal). I'd consider this one CLOSED.
 
-3. (Implementer also flagged a `PsiElement` import path nit. Marginal; not load-bearing for this evaluation.)
+3. **`error2` multi-arg renderer is documented** in `fir-additional-checkers-extension/guide.md` §"Multi-argument factories — renderer arguments are required". The worked example uses exactly the `expected vs actual sign` shape my task needed. The prompt's hint about this gap is also no longer accurate post-consolidation. CLOSED.
+
+4. **Minor**: `coneTypeOrNull` is used in the example but its import (`org.jetbrains.kotlin.fir.types.coneTypeOrNull`) is not explicitly written out. I had to infer the package. A line in the snippet saying `// import org.jetbrains.kotlin.fir.types.coneTypeOrNull` would shave a few seconds off this kind of task.
+
+5. **Minor**: The `Retention` of `Positive`/`Negative` annotations is unspecified in the spec but it matters: `@Retention(AnnotationRetention.BINARY)` makes the round-trip viable; `SOURCE` does not. I used `BINARY` based on general Kotlin knowledge, but a sentence in the skill about retention for round-trippable type annotations would be helpful.
+
+## Failure analysis
+
+None. Score is 12/12 on mandatory criteria.
+
+## Verification commands actually run (matching SPEC §"Verification procedure")
+
+```bash
+./gradlew :plugin:jar --console=plain                                   # PASS
+./gradlew :sample:run --rerun-tasks --console=plain                     # PASS; prints 5 / -7 / 5 / -7 / 42
+./gradlew :negative-sample:compileKotlin --rerun-tasks --console=plain  # FAIL as expected, with 3 [ILLEGAL_NUMBER_SIGN] errors
+
+grep -F 'ConeAttribute<ConeNumberSignAttribute>' \
+  plugin/src/main/kotlin/com/example/signs/fir/ConeNumberSignAttribute.kt    # PASS
+grep -F 'attributeAccessor<ConeNumberSignAttribute>' \
+  plugin/src/main/kotlin/com/example/signs/fir/ConeNumberSignAttribute.kt    # PASS
+grep -E 'override (fun|val)' \
+  plugin/src/main/kotlin/com/example/signs/fir/ConeNumberSignAttribute.kt | \
+  grep -E 'union|intersect|add|isSubtypeOf|key|keepInInferredDeclarationType' # PASS — 6 hits
+```
+
+Captured diagnostic output from the failed `:negative-sample:compileKotlin`:
+
+```
+e: Bad.kt:12:21 [ILLEGAL_NUMBER_SIGN] @Positive expected, but @Negative was passed
+e: Bad.kt:16:21 [ILLEGAL_NUMBER_SIGN] @Negative expected, but @Positive was passed
+e: Bad.kt:20:31 [ILLEGAL_NUMBER_SIGN] @Positive expected, but @Negative was passed
+```
+
+The factory name `ILLEGAL_NUMBER_SIGN` is rendered because the sample/negative-sample modules pass `-Xrender-internal-diagnostic-names`; the human-readable message follows the bracketed factory name.

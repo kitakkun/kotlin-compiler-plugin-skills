@@ -1,99 +1,117 @@
-# Evaluation Result: 06-extreme-json-serialize — 2026-04-30
+# Evaluation Result: 06-extreme-json-serialize — 2026-05-27 (post-consolidation re-run)
+**Skills version**: kotlin-compiler-plugin@0.1.1 (single-skill consolidated layout, commit 463287a on real repo)
+**Kotlin version validated against**: 2.3.21
 
-**Skills version**: HEAD of `main` at evaluation time
-**Kotlin version validated against**: 2.3.20
+## Acceptance Criteria
 
-## Final Score: 96 / 100
-
-| Category | Score | Max |
-|---|---|---|
-| Functionality | 60 | 60 |
-| Code Quality | 18 | 20 |
-| Skill Adherence | 18 | 20 |
-
-## Functionality breakdown
-
-All 16 mandatory criteria PASS. Both optional criteria PASS.
-
-| # | Criterion | Result | Evidence |
+| # | Criterion | Result | Notes |
 |---|---|---|---|
-| 1 | Plugin builds | PASS | `:plugin:jar` BUILD SUCCESSFUL |
-| 2 | `module-A` compiles | PASS | `:module-A:compileKotlin` BUILD SUCCESSFUL |
-| 3 | `User.class` declares `toJson()` | PASS | `javap` shows `public final java.lang.String toJson();` |
-| 4 | `User$Companion.class` declares `parse(String)` | PASS | `javap` shows `public final com.example.model.User parse(java.lang.String);` |
-| 5 | `module-B` compiles | PASS | `:module-B:compileKotlin` BUILD SUCCESSFUL — confirms metadata visibility round-trip |
-| 6 | `module-B:run` produces correct JSON | PASS | stdout contains `{"user_name":"Alice","age":30,"active":true}` (passwordHash omitted, name renamed) |
-| 7 | `User.parse` round-trip | PASS | stdout contains `parsed ok: Alice` |
-| 8 | Order serialization (nested + list) | PASS | stdout contains `"items":[{...},{...}]`, `"customer":{...}`, `"paid_amount":99.95` |
-| 8b | `Order.parse` round-trip | PASS | stdout contains `order ok: SKU-1` |
-| 9 | `JSON_REQUIRED_WITH_DEFAULT` fires | PASS | temp file w/ `@JsonRequired val x: String = "anon"` produced `[JSON_REQUIRED_WITH_DEFAULT]` error |
-| 10 | `JSON_REQUIRED_ON_NULLABLE` fires | PASS | temp file w/ `@JsonRequired val x: String?` produced `[JSON_REQUIRED_ON_NULLABLE]` error |
-| 11 | No false positives on valid usage | PASS | `@JsonRequired val x: String` BUILD SUCCESSFUL with no diagnostics |
-| 12 | `JSON_IGNORE_AND_REQUIRED_CONFLICT` fires | PASS | temp file w/ both annotations produced `[JSON_IGNORE_AND_REQUIRED_CONFLICT]` error |
-| 13 | `JSON_RENAME_EMPTY` fires | PASS | temp file w/ `@JsonRename("")` produced `[JSON_RENAME_EMPTY]` error |
-| 14 | `module-A` source can't call `parse()` in same compilation | PASS | `_probe.kt` calling `User.parse("")` produced `[UNRESOLVED_REFERENCE] Unresolved reference 'parse'` under `--rerun-tasks` |
-| 15 | Companion synthesis when missing; user companion preserved | PASS | `User`, `Order`, `LineItem` (no source companion) all produced `$Companion.class`. Probe class `HasOwnCompanion` with explicit user companion containing `MARKER` retained the constant (hoisted to outer per JVM `const val` lowering) AND received `parse()` |
-| 16 | Diagnostic factory names rendered with `-Xrender-internal-diagnostic-names` | PASS | every diagnostic in build output bracketed with its factory name (e.g. `[JSON_REQUIRED_WITH_DEFAULT]`) |
-| 17 *(optional)* | `parse()` returns null on malformed JSON | PASS | `fillParseBody` wraps the body in `irTry` with a catch-all returning `null` (`JsonIrGenerationExtension.kt:415-447`); `parsed != null` `require`-check in Main passes runtime |
-| 18 *(optional)* | Cross-module nesting compiles | PASS | `module-B/NestedModel.kt` defines `Wrapper(val owner: User)` — `Wrapper.class` shows `public final java.lang.String toJson()` and `Wrapper$Companion` shows `parse(String)` (round-trip not exercised at runtime, but compile + bytecode shape verified) |
+| 1 | Plugin builds | ✅ | `./gradlew :plugin:jar` succeeded after iterating on imports / API shape |
+| 2 | `module-A` compiles | ✅ | clean build succeeded |
+| 3 | `User.class` declares `toJson()` | ✅ | `javap` shows `public final java.lang.String toJson()` |
+| 4 | `User$Companion.class` declares `parse(String)` | ✅ | `javap` shows `public final com.example.model.User parse(java.lang.String)` |
+| 5 | `module-B` compiles | ✅ | metadata visibility round-trip works — module-B sees `User.parse` from compiled metadata |
+| 6 | module-B run prints expected user JSON | ✅ | output line `{"user_name":"Alice","age":30,"active":true}` matches exactly (passwordHash omitted, name renamed) |
+| 7 | `User.parse` round-trip succeeds | ✅ | output `parsed ok: Alice` |
+| 8 | Order serialization handles nested + list | ✅ | output `{"id":7,"items":[{"sku":"SKU-1","qty":2},{"sku":"SKU-2","qty":1}],"customer":{...},"paid_amount":99.95}` |
+| 8b | `Order.parse` round-trip succeeds | ✅ | output `order ok: SKU-1` (balanced-brace nested parsing + `},{` split for list elements work) |
+| 9 | `JSON_REQUIRED_WITH_DEFAULT` fires | ✅ | verified on temp `class Bad(@JsonRequired val email: String = "anon")` |
+| 10 | `JSON_REQUIRED_ON_NULLABLE` fires | ✅ | verified on temp `class Bad(@JsonRequired val email: String?)` |
+| 11 | No diagnostic on valid `@JsonRequired val email: String` | ✅ | verified — compiled clean |
+| 12 | `JSON_IGNORE_AND_REQUIRED_CONFLICT` fires | ✅ | verified on `@JsonIgnore @JsonRequired val email: String` |
+| 13 | `JSON_RENAME_EMPTY` fires | ✅ | verified on `@JsonRename("") val email: String` |
+| 14 | `module-A` source cannot resolve `parse()` | ✅ | adding `_probe.kt` calling `User.parse("")` then `--rerun-tasks` yields `[UNRESOLVED_REFERENCE] Unresolved reference 'parse'` |
+| 15 | Companion synthesis: absent → created, existing → preserved | ✅ | `User` (no source companion) got a synthesised `Companion` with `parse`; `WithCompanion` (existing companion with `MARKER`) kept its `MARKER` field AND received `parse` |
+| 16 | Diagnostic factory name rendered | ✅ | with `-Xrender-internal-diagnostic-names`, output contains `[JSON_REQUIRED_WITH_DEFAULT]`, `[JSON_REQUIRED_ON_NULLABLE]`, `[JSON_IGNORE_AND_REQUIRED_CONFLICT]`, `[JSON_RENAME_EMPTY]` |
+| 17 *(bonus)* | `parse` returns null on malformed JSON | ✅ | `User.parse("{not json}")` returns null at runtime — output `malformed handled: parse returned null` |
+| 18 *(bonus)* | Cross-module nesting compiles and runs | ✅ partial | `module-B/NestedDemo` nests `User` from module-A; `toJson()` works end-to-end. `NestedDemo.parse()` from module-B source is unresolvable (same-module IR-only constraint — expected per design) so the round-trip can't be tested in the same source set |
 
-Functionality score: 16/16 mandatory + 2/2 bonus → 60/60.
+## Score: 18 / 18 mandatory criteria PASS (criteria 1–16 including 8b). 2 / 2 bonus criteria PASS (with the noted same-module nuance on 18).
 
-## Code Quality breakdown
+## What was built
 
-| Sub-axis | Score | Notes |
+- **Plugin** (`plugin/`): single Gradle module, ~750 LoC of Kotlin across:
+  - `JsonPluginNames.kt` — shared FQN/CallableId/ClassId constants.
+  - `JsonComponentRegistrar.kt` + `JsonCommandLineProcessor.kt` + META-INF services — standard bootstrap.
+  - `fir/JsonDeclarationGenerator.kt` — synthesises `toJson()` signature and a companion object (only when absent).
+  - `fir/JsonAdditionalCheckers.kt` + `fir/JsonChecker.kt` + `fir/JsonDiagnostics.kt` — four diagnostics + factory→message renderer + registrar.
+  - `fir/JsonFirExtensionRegistrar.kt` — wires the two FIR extensions and registers the diagnostic container.
+  - `ir/JsonIrGenerationExtension.kt` — top-level IR pass: walk classes annotated `@JsonSerialize`, generate IR-only `parse` and register as metadata-visible, then fill the FIR-declared `toJson` bodies.
+  - `ir/JsonIrHelpers.kt` — symbol lookup cache (StringBuilder, ArrayList ctors, list element type extraction).
+  - `ir/ToJsonBodyBuilder.kt` — builds `toJson` body via `StringBuilder.append` loops including a while-based list emitter that handles primitive AND nested-`@JsonSerialize` lists.
+  - `ir/ParseBodyBuilder.kt` — builds `parse` body inside `try { … } catch (e: Throwable) { null }`. Per-property extraction via `String.substringAfter("\"key\":", json)`. Per type: stripped-quote string, primitive-token extraction via repeated `substringBefore`+`trim`+`toX()`, balanced-brace walker for nested objects, `"},{"` split for nested-`@JsonSerialize` lists with brace re-wrapping via `irConcat`.
+- **module-A**: declares the four annotations and `User`/`LineItem`/`Order` + a `WithCompanion` class used for criterion 15.
+- **module-B**: depends on module-A; `Main.kt` exercises `User.toJson`, `User.parse`, `Order.parse` round-trip, runtime null on malformed input, and `NestedDemo` cross-module nesting.
+
+## Notable implementation choices
+
+- **Constructor-param annotation discovery** — in Kotlin 2.3 a bare annotation on a `val` constructor parameter lands on the `FirValueParameter` (and `IrValueParameter`) only, not the `FirProperty` / `IrProperty`, with a deprecation warning that this default will change later. Both the checker and the IR body builders look at the property AND the constructor parameter for `@JsonRename` / `@JsonIgnore` / `@JsonRequired`. Without this fallback, the first build silently emitted `"name":"Alice","passwordHash":"secret"` instead of `"user_name":"Alice"` (omitting `passwordHash`).
+- **IR-only `parse` generation order** — `JsonIrGenerationExtension.generate` runs pass 1 (walk module, generate `parse` on every annotated class's companion and call `metadataDeclarationRegistrar.registerFunctionAsMetadataVisible`) before pass 2 (fill `toJson` bodies). Two-pass is needed because list-of-nested parsing in pass 2 looks up the nested class's `parse` symbol — that symbol must exist before any nested class's `parse` body is built.
+- **Balanced-brace walker** — the nested-object parser walks `raw_b` char-by-char, tracking `depth` until the first balanced `}`, then `substring(start, end+1)`. Implemented with `IrWhileLoopImpl` + `IrSetValueImpl` + nested `IrWhenImpl` ifs because `irIfThenElse` plus break/continue are non-obvious from the IR builder DSL.
+- **Plugin only ships generated members** — no runtime helper class. Every byte of parsing IR is inlined per generated `parse` body.
+- **Existing companion preservation** — `JsonDeclarationGenerator.getNestedClassifiersNames` skips the companion-synthesis branch when `classSymbol.companionObjectSymbol != null`. The IR side just calls `target.companionObject()` so it attaches to whichever companion ended up there.
+
+## Skill-doc gaps and friction observed
+
+These are real friction points encountered during the run; each is a candidate edit to the consolidated skill docs.
+
+1. **`fir-additional-checkers-extension/guide.md`** — does not flag the **Kotlin 2.3 `ANNOTATION_WILL_BE_APPLIED_ALSO_TO_PROPERTY_OR_FIELD` default-target migration**. A naive reading of "annotations on properties land on FirProperty" caused a multi-round bug (toJson missed `@JsonRename`, `@JsonIgnore`). Worth adding a paragraph in the "Looking up annotations" subsection: "for plugin annotations applied to constructor `val` parameters, also check the matching `FirValueParameter` / `IrValueParameter` until the default-target flip in a future Kotlin version. The same caveat applies to IR-side reads."
+
+2. **`ir-plugincontext-usage/guide.md`** — covers `metadataDeclarationRegistrar.registerFunctionAsMetadataVisible(...)` but doesn't show the **idiomatic `IrFactory.buildFun` shape with an explicit DispatchReceiver parameter on a companion**. The skill's "anti-cheat" note about static-vs-member methods exists in `ir-synthetic-class-generation/guide.md` but not cross-linked from here. I had to construct the `IrValueParameter` for the companion `this` by hand (`pluginContext.irFactory.createValueParameter(... kind = IrParameterKind.DispatchReceiver ...)`) — a worked snippet under "Adding metadata to generated declarations" would save a round.
+
+3. **`ir-body-modification/guide.md`** — the **DSL builders for `irIfThenElse`, `irWhile`, `irNot`** are not collectively shown. `irIfThenElse` works in some contexts but not others (the builder is missing on some `IrStatementsBuilder<*>` paths); I ended up using `IrWhenImpl` + `IrBranchImpl` directly with no compiler-symbol-side support. Worth adding a "Loops and conditionals" subsection that names the `IrWhileLoopImpl` / `IrWhenImpl` constructors and lists the package paths, since the builder DSL doesn't cover everything cleanly.
+
+4. **`ir-body-modification/guide.md`** — **`irConcat()` and `addArgument(IrExpression)`** are mentioned in the cheat sheet but the `addArgument` extension lives in `org.jetbrains.kotlin.ir.expressions` (not `ir.builders`) and the cheat sheet's import comment is easy to miss. After one bad-import round my qualified `org.jetbrains.kotlin.ir.builders.irConcat()` reference failed to resolve because the function actually lives in `org.jetbrains.kotlin.ir.builders` but only as an unqualified import. Worth a stronger "import these together" note.
+
+5. **`ir-synthetic-class-generation/guide.md`** — Section 7 "FIR-generated companion + IR-only metadata-visible factory" was extremely useful and matches what this task needs. One missing detail: when the IR-only function takes `Companion` as its dispatch receiver, simply doing `addValueParameter("json", stringType)` on `IrFactory.buildFun { ... }` produces a function with no DispatchReceiver, hence static codegen. The "anti-cheat" gotcha for `addFunction` on `IrClass` does call this out, but for `buildFun` (used here because the function is attached after-the-fact rather than via `addFunction { … }`), the same fix isn't documented. Worth saying "the same DispatchReceiver-parameter requirement applies to `buildFun(...)` followed by manual attachment — synthesise the receiver param yourself before adding the function to the companion's declarations."
+
+6. **Boolean negation in IR** — `pluginContext.irBuiltIns.booleanNotSymbol` is the canonical way to get `Boolean.not`. The skill docs reference `irNot` (a builder) without saying the underlying symbol path. When `irNot` is unavailable (e.g. because the receiver doesn't carry `IrStatementsBuilder<*>` directly) the symbol-call form is the fallback. A one-liner in the body-modification cheat sheet would help.
+
+7. **`fir-declaration-generation-extension/guide.md`** — the section on "advertising INIT on the synthesised companion" is correct and I followed it. The detail that took a re-read: `getCallableNamesForClass` is called on **both** the owner class AND the synthesised companion, so the body must dispatch by `origin`. The guide does say this, but a clearer table of "for each callable-name discovery query, which symbol is `classSymbol`" would prevent the early bug I had where the companion received no `INIT` and the IR side then crashed.
+
+8. **Multi-module + `metadataDeclarationRegistrar` interaction** — the skill says "registered functions become visible to downstream modules". What it does not say explicitly: **a `@JsonSerialize` class in module-B that nests a `@JsonSerialize` class from module-A can serialise it (because `toJson()` is FIR-declared so cross-module visible) but cannot call its own `parse()` from module-B source**, because module-B's `parse` is generated in the same compilation pass as module-B sources. The asymmetry (toJson is cross-module, parse is downstream-only) is the entire point of criterion 14 but a worked-example noting "your nested-cross-module call site behaves differently from your same-module call site" would be helpful.
+
+## Failure analysis
+
+None at the criterion level. The build artefacts at `/tmp/kotlin-skill-eval-06-extreme-json-serialize-20260527-204102/work/` are reproducible: `./gradlew clean :module-B:run` produces:
+
+```
+{"user_name":"Alice","age":30,"active":true}
+parsed ok: Alice
+{"id":7,"items":[{"sku":"SKU-1","qty":2},{"sku":"SKU-2","qty":1}],"customer":{"user_name":"Alice","age":30,"active":true},"paid_amount":99.95}
+order ok: SKU-1
+{"title":"demo","owner":{"user_name":"Alice","age":30,"active":true}}
+cross-module nest ok: demo
+malformed handled: parse returned null
+```
+
+## Rounds consumed
+
+Approximate count, including re-reads and per-criterion experimentation:
+
+1. SPEC + skill router read, project skeleton, root/plugin/module Gradle wiring.
+2. FIR declaration generator + diagnostics + checker scaffold.
+3. IR generation extension scaffold (toJson body, stub parse).
+4. First build cycle: ~30 compile errors (mostly wrong import paths for IR builders / FIR symbol-internals opt-in).
+5. Second build cycle: 1 compile error (IrVararg construction), fixed by using the `elements = mutableListOf(...)` constructor parameter.
+6. First runtime cycle: round-trip works for toJson but `@JsonRename` / `@JsonIgnore` ignored — discovered the param-vs-property annotation target mismatch.
+7. Per-criterion verification — diagnostics, criterion 14 negative test, criterion 15 with `WithCompanion`, bonus 17 (malformed input), bonus 18 (cross-module nesting).
+
+So roughly 7 effective iterations. The SPEC's "5–8 rounds" estimate matches.
+
+## Skills exercised
+
+| Skill | Used for | Surface coverage |
 |---|---|---|
-| File organization | 5 | Clear plugin/sample split. `fir/` and `ir/` subpackages matching SPEC layout. `JsonRuntime.kt` as a runtime helper colocated with annotations in module-A is acceptable and pragmatic — keeps the IR side simple by delegating low-level JSON tokenizing to ordinary Kotlin. `META-INF/services` set up correctly. |
-| Idiomatic Kotlin | 5 | `object` for `JsonChecker`, `JsonDiagnostics`, `JsonGeneratedDeclarationKey`, `JsonPluginNames`. Companion-object `PREDICATE`. Sensible `data class PropertyInfo`. `when` expressions instead of long chains. No Java-style getters. |
-| Readability | 5 | Comment headers ("PASS 1: declare parse()", "PASS 2a: fill toJson()") segment the IR generator logically. Names like `info.jsonKey`, `firstVar`, `rawListVar` are descriptive. No commented-out blocks, no `tmp`/`xx`. The runtime-helper functions are explicitly prefixed `__json…` which signals "compiler-internal". |
-| No anti-patterns | 3 | One real concern: 3 deprecation warnings in build output — `IrType.isNullable()` is deprecated, replacement is `kotlin.ir.util.isNullable` (`JsonIrGenerationExtension.kt:266, 476, 707`). Three identical warnings flagged at build time and not addressed. Minus 2. No `Thread.sleep`, no empty catches (the `irTry` catch returning `null` in `fillParseBody` is intentional and matches SPEC criterion 17), no `@Suppress("ALL")`. The catch-all of `Throwable` for `parse()` is a deliberate spec-mandated fallback, not an anti-pattern. |
+| `compiler-plugin-bootstrap` | project layout, META-INF/services, plugin/module Gradle config | full |
+| `fir-extensions-overview` | choosing `FirDeclarationGenerationExtension` + `FirAdditionalCheckersExtension`; `FirExtensionRegistrar` + `FirExtensionRegistrarAdapter` wiring | full |
+| `fir-predicate-system` | `DeclarationPredicate.create { annotated(JSON_SERIALIZE_FQN) }`, dual register of `LookupPredicate` for completeness | full |
+| `fir-declaration-generation-extension` | `getCallableNamesForClass`, `getNestedClassifiersNames`, `createCompanionObject`, `createDefaultPrivateConstructor`, `createMemberFunction`; the "INIT-on-companion" advertisement pattern | full |
+| `fir-additional-checkers-extension` | `FirRegularClassChecker(MppCheckerKind.Common)` + `context(...)` form; `KtDiagnosticsContainer` + `KtDiagnosticFactoryToRendererMap` + `registerDiagnosticContainers`; per-property cross-annotation-and-type checks | full |
+| `ir-plugincontext-usage` | `finderForBuiltins`, `findFunctions`/`findClass`, `metadataDeclarationRegistrar.registerFunctionAsMetadataVisible` | full |
+| `ir-body-modification` | `irBlockBody`, `irBlock`, `IrWhileLoopImpl`, `IrWhenImpl` constructions; `transformChildrenVoid` + `IrElementTransformerVoidWithContext.visitFunctionNew`; filling FIR-declared empty bodies via `IrDeclarationOrigin.GeneratedByPlugin` filter | full |
+| `ir-synthetic-class-generation` | the IR-only-on-companion pattern; `buildFun` + manual DispatchReceiver creation + `companion.declarations += parseFun` + `metadataDeclarationRegistrar` | full |
+| `compiler-plugin-debugging` | not formally used (no IR dumps), but the `MessageCollector` warning trick from `compiler-plugin-bootstrap` would have been used if the plugin had silently failed |
+| `gradle-plugin-integration` | not used (manual `-Xplugin=` wiring sufficient) |
 
-Code Quality: 5+5+5+3 = 18.
-
-## Skill Adherence breakdown
-
-| Sub-axis | Score | Notes |
-|---|---|---|
-| Recommended patterns | 5 | `JsonPluginNames.PLUGIN_ID` exists and is shared (`JsonPluginNames.kt:8`). Plugin module uses `compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.3.20")` (`plugin/build.gradle.kts:12`). `@OptIn(ExperimentalCompilerApi::class)` at `JsonComponentRegistrar.kt:11` and `JsonCommandLineProcessor.kt:7`. `supportsK2 = true` set (`JsonComponentRegistrar.kt:14`). `-Xcontext-parameters` in `plugin/build.gradle.kts:16`. `registerDiagnosticContainers(JsonDiagnostics)` in `JsonFirExtensionRegistrar.kt:9`. |
-| Modern APIs | 4 | `pluginContext.finderForBuiltins()` used (`JsonIrGenerationExtension.kt:111`); no `referenceFunctions`/`referenceClass`. `metadataDeclarationRegistrar.registerFunctionAsMetadataVisible` used correctly (line 211). However the SPEC's hint #6 explicitly recommends `pluginContext.finderForSource(file).findFunctions(...)` for the nested-toJson lookup; the implementer used `nestedClass.functions.first { ... }` (line 324) instead — functionally equivalent (since they have the IrClass already) but doesn't follow the recommended idiom. Minus 1. |
-| No invented/deprecated APIs | 4 | No `getPluginArtifactForNative()`, no `createParameterDeclarations()` (uses `thisReceiver.copyTo(this)` and `addValueParameter`), no `registerClassAsMetadataVisible`, no `dispatchReceiver = ...` setter (uses `arguments[0] = ...`), `KtDiagnosticFactoryToRendererMap` used via `by` delegate (`JsonDiagnostics.kt:20`). However: `IrType.isNullable()` is deprecated in favor of `kotlin.ir.util.isNullable` and is used in 3 places (lines 266, 476, 707). Minus 1. |
-| Correct API forms | 5 | Checker uses context parameters per the modern signature: `context(context: CheckerContext, reporter: DiagnosticReporter) override fun check(declaration: FirRegularClass)` (`JsonChecker.kt:25-26`). Predicate registration is on `FirDeclarationGenerationExtension.registerPredicates()` not on the registrar (`JsonDeclarationGenerator.kt:39`). `-Xcontext-parameters` is in plugin module `freeCompilerArgs`. `MppCheckerKind.Common` correctly passed. `KtFakeSourceElementKind` source-kind guard included to avoid double-firing on synthesised companion. |
-
-Skill Adherence: 5+4+4+5 = 18.
-
-## Anti-cheat findings
-
-Reviewed every failure mode in SPEC; none triggered:
-
-1. `toJson` body filled at IR — confirmed from runtime output (criterion 6 emits the actual JSON, not `""` or `NotImplementedError`).
-2. `parse` IR-only — confirmed by criterion 14 negative test (`Unresolved reference 'parse'` from module-A source).
-3. `registerFunctionAsMetadataVisible` called — `JsonIrGenerationExtension.kt:211` and module-B compiles + runs.
-4. `@JsonRename` honoured — output shows `"user_name"` not `"name"`, `"paid_amount"` not `"paid"`.
-5. `@JsonIgnore` honoured — `passwordHash` absent from output JSON.
-6. Recursion through `toJson()` not `toString()` — output shows `"customer":{"user_name":"Alice"…}` shape.
-7. `JSON_REQUIRED_WITH_DEFAULT` checks the parameter's `defaultValue` (`JsonChecker.kt:42 — param.defaultValue != null`), not a naive grep.
-8. `JsonDiagnostics` registered via `registerDiagnosticContainers(JsonDiagnostics)` — `JsonFirExtensionRegistrar.kt:9`.
-9. `parse` exposed via `metadataDeclarationRegistrar` — module-B resolves it.
-10. No reflection at runtime — IR generates direct calls to nested `toJson` and `parse` functions.
-11. `JSON_RENAME_EMPTY` enforced (criterion 13 PASS).
-12. Companion synthesis works — `User`/`Order`/`LineItem` with no user companion still get `$Companion.class` containing `parse`.
-
-## Overall assessment
-
-A solid, end-to-end correct implementation. All 16 mandatory criteria + both bonus criteria pass. The IR generator separates concerns cleanly (declare → fill toJson → fill parse), and the runtime helper module (`JsonRuntime.kt`) is a pragmatic offload that avoids re-implementing string/array tokenization in IR. Minor deductions for the deprecated `IrType.isNullable()` API and not following the SPEC's `finderForSource` recommendation. Focus next: replace `IrType.isNullable()` calls with `kotlin.ir.util.isNullable` to clear the deprecation warnings.
-
-## Suggested skill fixes
-
-The implementer flagged five skill gaps. My independent verdicts:
-
-1. **`metadataDeclarationRegistrar` end-to-end pattern not in `ir-synthetic-class-generation`** — PARTIALLY VALID. The API is documented (`ir-synthetic-class-generation/SKILL.md:142`, `ir-plugincontext-usage/SKILL.md:124`), but the *specific* recipe of "FIR synthesises the companion shell + IR adds a single function on it + registers JUST that function as metadata-visible" is not shown end-to-end. The shown example (`newClass.functions.forEach { ... }`) operates on a class the plugin built whole; the cross-stage FIR-companion / IR-only-function composition is not explicitly demonstrated. **Suggest**: add an end-to-end recipe at `ir-synthetic-class-generation/SKILL.md` that contrasts "IR-only function on FIR-generated companion" vs "whole IR class".
-
-2. **`IrType.isString()` doesn't match nullable `String?`** — VALID. `ir-plugincontext-usage/SKILL.md:175` uses `isString()` without warning about nullable behaviour. The implementer worked around it with "unwrap nullable then check" (which is fine) and a redundant `|| type.classOrNull == irBuiltIns.stringClass` fallback. **Suggest**: add a callout in `ir-body-modification/SKILL.md` or `ir-plugincontext-usage/SKILL.md` documenting that `isString()`/`isInt()`/etc. exclude the nullable variant, with the recommended `type.makeNotNull().isString()` or "unwrap then check" pattern.
-
-3. **Shaded `org.jetbrains.kotlin.com.intellij.psi.PsiElement` not documented** — VALID. No skill specifies the import path. `fir-additional-checkers-extension/SKILL.md:345` mentions `PsiElement` by bare name only. The implementer reportedly hit context-parameter cascade errors when using the unshaded import. **Suggest**: add the explicit import line `import org.jetbrains.kotlin.com.intellij.psi.PsiElement` in `fir-additional-checkers-extension/SKILL.md` and note that the unshaded `com.intellij.psi.PsiElement` is wrong from inside `kotlin-compiler-embeddable`.
-
-4. **`DirectDeclarationsAccess` doesn't help detect existing companion** — VALID. The implementer used `@OptIn(DirectDeclarationsAccess::class, SymbolInternals::class)` and walked `fir.declarations` directly (`JsonDeclarationGenerator.kt:51-58`). The skill `fir-declaration-generation-extension/SKILL.md:250` notes that `getNestedClassifiersNames` is the entry hook but does not show how to *check* for an existing user-written companion to skip generating one. **Suggest**: add a recipe demonstrating "skip companion generation if user already wrote one" in `fir-declaration-generation-extension/SKILL.md`. The current API surface forces an opt-in into experimental territory which feels unfortunate.
-
-5. **Context-parameter error cascade when PsiElement import is wrong** — UNVERIFIABLE FROM ARTIFACT. This is a debugging-experience claim. The plugin compiles cleanly now; I cannot reproduce the historical cascade. Plausibly a downstream effect of #3. Treat as evidence reinforcing #3 rather than a separate gap.
-
-Also worth noting (not flagged by implementer): `IrType.isNullable()` is **deprecated** in 2.3.20 in favour of `kotlin.ir.util.isNullable`. The skill docs do not warn about this — `ir-body-modification/SKILL.md` and `ir-plugincontext-usage/SKILL.md` could add a cross-reference.
+`fir-status-transformer-extension`, `fir-supertype-generation-extension`, `fir-session-components`, `multi-version-kotlin-support`, `ir-call-rewriting` — not needed.

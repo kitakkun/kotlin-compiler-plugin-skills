@@ -1,86 +1,118 @@
-# Evaluation Result: 05-multiversion-final-checker — 2026-04-30
+# Evaluation Result: 05-multiversion-final-checker — 2026-05-27 (post-consolidation re-run)
 
-**Skills version**: HEAD of `main` at evaluation time
-**Kotlin version validated against**: 2.2.20 + 2.3.20
+**Skills version**: kotlin-compiler-plugin@0.1.1 (single-skill consolidated layout, commit 463287a on real repo)
+**Kotlin version validated against**: 2.3.21 (and 2.2.20 for the per-version JAR)
 
-## Final Score: 99 / 100
+In practice the per-version `compileOnly` pins used here were `kotlin-compiler-embeddable:2.3.20` and `kotlin-compiler-embeddable:2.2.20`, matching the spec table. Sample Kotlin Gradle plugin pins are `2.3.20` and `2.2.20` (one per sample, via per-subproject `buildscript {}`). The single shared Kotlin Gradle plugin used by the plugin and plugin-common modules is `2.3.21`.
 
-| Category | Score | Max |
-|---|---|---|
-| Functionality | 60 | 60 |
-| Code Quality | 19 | 20 |
-| Skill Adherence | 20 | 20 |
+## Strategy choice
 
-## Functionality breakdown
+**Option B** — shared `plugin-common/` + per-version `plugin-2.2/` and `plugin-2.3/` overlays. Documented in `STRATEGY.md` at the project root and in the KDoc on every per-version `FinalCheckerComponentRegistrar.kt`. The two overlays differ in exactly two places: (1) the `compileOnly("...kotlin-compiler-embeddable:2.X.20")` pin in `build.gradle.kts`; (2) the presence/absence of `override val pluginId` on `CompilerPluginRegistrar`. Every other source file is byte-identical between the overlays (verified with `diff`).
 
-(Mandatory criteria 1–12; criterion 13 is optional and not scored.)
+## Project layout
 
-| # | Criterion | Result | Evidence |
+```
+/tmp/kotlin-skill-eval-05-multiversion-final-checker-20260527-204101/
+├── settings.gradle.kts            (includes plugin-common, plugin-2.2, plugin-2.3, sample-2.2, sample-2.3)
+├── build.gradle.kts
+├── gradle.properties              (kotlin.compiler.execution.strategy=in-process)
+├── gradlew{,.bat}                 (copied from skill bootstrap example)
+├── gradle/wrapper/                (copied from skill bootstrap example)
+├── plugin-common/                 (KGP 2.3.21, JVM jar with FinalCheckerPluginNames const vals)
+├── plugin-2.2/                    (compileOnly kotlin-compiler-embeddable:2.2.20, -Xcontext-parameters)
+├── plugin-2.3/                    (compileOnly kotlin-compiler-embeddable:2.3.20, -Xcontext-parameters)
+├── sample-2.2/                    (buildscript classpath kotlin-gradle-plugin:2.2.20)
+├── sample-2.3/                    (buildscript classpath kotlin-gradle-plugin:2.3.20)
+└── STRATEGY.md
+```
+
+`plugin-common` is consumed via `implementation(project(":plugin-common"))`. `FinalCheckerPluginNames` exposes only `const val` strings, so the plugin's overlay classes inline the constants at compile time and plugin-common's runtime presence in the consumer's compiler classloader is not required.
+
+## Acceptance Criteria
+
+| # | Criterion | Result | Notes |
 |---|---|---|---|
-| 1 | Both plugin JARs build | PASS | `./gradlew :plugin-2.2:jar :plugin-2.3:jar` → `BUILD SUCCESSFUL` |
-| 2 | `plugin-2.2.jar` exists | PASS | `test -f plugin-2.2/build/libs/plugin-2.2.jar` returned 0 |
-| 3 | `plugin-2.3.jar` exists | PASS | `test -f plugin-2.3/build/libs/plugin-2.3.jar` returned 0 |
-| 4 | 2.2 jar declares registrar service | PASS | `unzip -p plugin-2.2.jar META-INF/services/...CompilerPluginRegistrar` → `com.example.finalchecker.FinalCheckerComponentRegistrar` |
-| 5 | 2.3 jar declares registrar service | PASS | same FQN reported by `unzip -p` on plugin-2.3.jar |
-| 6 | 2.3 plugin's `ComponentRegistrar` overrides `pluginId` | PASS | `plugin-2.3/src/main/kotlin/com/example/finalchecker/FinalCheckerComponentRegistrar.kt:16` `override val pluginId: String = "com.example.finalchecker"` |
-| 7 | 2.2 plugin's `ComponentRegistrar` does NOT override `pluginId` | PASS | grep over `plugin-2.2/src` returns no `override val pluginId` line; direct read of `plugin-2.2/.../FinalCheckerComponentRegistrar.kt` confirms it; build against `kotlin-compiler-embeddable:2.2.20` succeeds |
-| 8 | Both plugins use context-parameter `check` form | PASS | grep finds `context(context: CheckerContext, reporter: DiagnosticReporter)` in both `plugin-2.2/src/main/kotlin/com/example/finalchecker/FinalChecker.kt:25` and `plugin-2.3/src/main/kotlin/com/example/finalchecker/FinalChecker.kt:24` |
-| 9 | sample-2.2 produces 3 FINAL_VIOLATED errors | PASS | Build log shows exactly 3 `[FINAL_VIOLATED]` lines on Main.kt:6,7,8 (Bad1/Bad2/Bad3) |
-| 10 | sample-2.3 produces 3 FINAL_VIOLATED errors | PASS | Build log shows exactly 3 `[FINAL_VIOLATED]` lines on Main.kt:6,7,8 |
-| 11 | Neither sample errors on Ok or Unrelated | PASS | The 3 errors are on lines 6/7/8 only; line 5 (`Ok`) and line 9 (`Unrelated`) are not flagged in either build log |
-| 12 | Strategy is documented (Option A or B) | PASS | `STRATEGY.md` at work-root explicitly states "Option A (full duplication)" with rationale; `settings.gradle.kts:7-13` and per-file header comments in both `FinalCheckerComponentRegistrar.kt` files reiterate the choice |
+| 1 | Both plugin JARs build | ✅ | `./gradlew :plugin-2.2:jar :plugin-2.3:jar` — BUILD SUCCESSFUL in 7s, 8 tasks executed. |
+| 2 | `plugin-2.2.jar` exists | ✅ | `plugin-2.2/build/libs/plugin-2.2.jar` (19 entries, 26 738 bytes). |
+| 3 | `plugin-2.3.jar` exists | ✅ | `plugin-2.3/build/libs/plugin-2.3.jar`. |
+| 4 | 2.2 jar declares registrar service | ✅ | `unzip -p .../plugin-2.2.jar META-INF/services/...CompilerPluginRegistrar` → `com.example.finalchecker.FinalCheckerComponentRegistrar`. |
+| 5 | 2.3 jar declares registrar service | ✅ | same content on the 2.3 jar. |
+| 6 | 2.3 registrar overrides `pluginId` | ✅ | `plugin-2.3/.../FinalCheckerComponentRegistrar.kt` has `override val pluginId: String = FinalCheckerPluginNames.PLUGIN_ID`. |
+| 7 | 2.2 registrar does NOT override `pluginId` | ✅ | `plugin-2.2/.../FinalCheckerComponentRegistrar.kt` has no `override val pluginId` line (only a KDoc mention that explains *why* it is omitted). The 2.2.20 build would have failed with "'pluginId' overrides nothing" if it did — the green build is the proof. |
+| 8 | Both plugins use context-parameter `check` form | ✅ | `grep -rE 'context\([^)]*CheckerContext[^)]*DiagnosticReporter\)' plugin-2.2/src plugin-2.3/src` matches one line in each `FinalRegularClassChecker.kt`. The `override fun check(declaration: FirRegularClass)` is on the line below. |
+| 9 | `sample-2.2:compileKotlin` produces 3 `FINAL_VIOLATED` errors | ✅ | `grep -c FINAL_VIOLATED /tmp/05-sample22.txt` → 3. Errors on `Bad1`/`Bad2`/`Bad3` (lines 6/7/8). |
+| 10 | `sample-2.3:compileKotlin` produces 3 `FINAL_VIOLATED` errors | ✅ | `grep -c FINAL_VIOLATED /tmp/05-sample23.txt` → 3. Same line numbers. |
+| 11 | Neither sample errors on `Ok` or `Unrelated` | ✅ | Diagnostic appears exactly 3 times in each build log; `grep -E 'Ok\|Unrelated' /tmp/05-sample*.txt` returns nothing. |
+| 12 | Strategy documented (Option A or B) | ✅ | `STRATEGY.md` at the project root + KDoc on both `FinalCheckerComponentRegistrar.kt` files and on `FinalCheckerPluginNames.kt`. |
+| 13 (bonus) | Per-sample KGP version independently overridable via `-Pkotlin.version=...` | ❌ | Not implemented. The two samples hard-code their KGP version in their respective `buildscript {}` blocks. Would require parameterising the `classpath(...)` coordinate from a Gradle property — feasible but skipped (criteria 1–12 are mandatory). |
 
-12 / 12 mandatory criteria passed. Functionality = 12/12 × 60 = **60**.
+## Score: 12 / 12 mandatory (criterion 13 bonus not attempted)
 
-## Code Quality breakdown
+## Build commands actually executed (and verified)
 
-| Sub-axis | Score | Notes |
-|---|---|---|
-| File organization | 5 | Clean per-version subprojects (`plugin-2.2`, `plugin-2.3`, `sample-2.2`, `sample-2.3`); files split by responsibility (`FinalChecker`, `FinalCheckerCheckersExtension`, `FinalCheckerComponentRegistrar`, `FinalCheckerDiagnostics`, `FinalCheckerFirExtensionRegistrar`); META-INF service files placed at `src/main/resources/META-INF/services/`. |
-| Idiomatic Kotlin | 5 | `object FinalChecker`, `object FinalCheckerDiagnostics`, `object FinalCheckerDefaultErrorMessages` used as singletons; no Java-style accessors; nullability is minimal (only `declaration.source ?: return`); `private val FINAL_ANNOTATION = ClassId(...)` at file scope. |
-| Readability | 4 | Names are descriptive (no `tmp`/`xx`); comments explain WHY (the 2.2-vs-2.3 divergence and the `buildscript {}` fallback) rather than WHAT. Minor blemish: an empty `plugin-common/src/` directory remains under `work/` even though the strategy chose Option A and the module is not listed in `settings.gradle.kts:14-19`. Cosmetic only, but slightly confusing. |
-| No anti-patterns | 5 | No `Thread.sleep`, no empty catches, no `@Suppress`, no copy-pasted long blocks beyond the small intentional duplication that Option A requires (and which is explicitly documented in `STRATEGY.md`). |
+```bash
+# From the sandbox root:
+./gradlew :plugin-2.2:jar :plugin-2.3:jar --console=plain        # BUILD SUCCESSFUL
+ls plugin-2.2/build/libs/ plugin-2.3/build/libs/                  # both jars present
+unzip -p plugin-2.2/build/libs/plugin-2.2.jar \
+  META-INF/services/org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
+# -> com.example.finalchecker.FinalCheckerComponentRegistrar
+unzip -p plugin-2.3/build/libs/plugin-2.3.jar \
+  META-INF/services/org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
+# -> com.example.finalchecker.FinalCheckerComponentRegistrar
 
-Code Quality = **19 / 20**.
+./gradlew :sample-2.2:compileKotlin --console=plain               # BUILD FAILED (expected)
+grep -c FINAL_VIOLATED /tmp/05-sample22.txt                       # 3
 
-## Skill Adherence breakdown
+./gradlew :sample-2.3:compileKotlin --console=plain               # BUILD FAILED (expected)
+grep -c FINAL_VIOLATED /tmp/05-sample23.txt                       # 3
+```
 
-| Sub-axis | Score | Notes |
-|---|---|---|
-| Recommended patterns | 5 | `@file:OptIn(ExperimentalCompilerApi::class)` on both `FinalCheckerComponentRegistrar.kt` files; `compileOnly("...kotlin-compiler-embeddable:<v>")` with version matching the subproject; `supportsK2 = true` on both registrars. (No shared constants object — but with the chosen Option A there is no shared module to put one in.) |
-| Modern APIs | 5 | Uses `error0<KtClass>(SourceElementPositioningStrategies.MODALITY_MODIFIER)`; uses `reporter.reportOn(...)`; FIR extension registers via `FirExtensionRegistrarAdapter.registerExtension(...)` and `+::FinalCheckerCheckersExtension`; `registerDiagnosticContainers(FinalCheckerDiagnostics)` inside `FirExtensionRegistrar.configurePlugin()`; checker uses `FirRegularClassChecker(MppCheckerKind.Common)`. |
-| No invented/deprecated APIs | 5 | Diagnostic renderer uses `by KtDiagnosticFactoryToRendererMap("FinalChecker") { map -> ... }` delegate factory on both versions, avoiding the internal-constructor pitfall. No `getPluginArtifactForNative()`, no `referenceClass`, no `dispatchReceiver = ...` setter. |
-| Correct API forms | 5 | `check(...)` override correctly uses context parameters: `context(context: CheckerContext, reporter: DiagnosticReporter) override fun check(declaration: FirRegularClass)` in both plugin variants. `-Xcontext-parameters` is added to `freeCompilerArgs` on both plugin modules (`plugin-2.2/build.gradle.kts:33`, `plugin-2.3/build.gradle.kts:27`). 2.2 ComponentRegistrar correctly omits `pluginId`; 2.3 correctly includes it. Per-subproject `buildscript {}` block applied per the `multi-version-kotlin-support` SKILL.md canonical pattern. |
+Both sample compiles fail with exit code 1 (because the diagnostic is an error, not a warning). The build log lines for each sample:
 
-Skill Adherence = **20 / 20**.
+```
+e: .../sample-2.X/src/main/kotlin/com/example/app/Main.kt:6:8 [FINAL_VIOLATED] Class annotated @Final must not be open, abstract, or sealed
+e: .../sample-2.X/src/main/kotlin/com/example/app/Main.kt:7:8 [FINAL_VIOLATED] Class annotated @Final must not be open, abstract, or sealed
+e: .../sample-2.X/src/main/kotlin/com/example/app/Main.kt:8:8 [FINAL_VIOLATED] Class annotated @Final must not be open, abstract, or sealed
+```
 
-## Anti-cheat findings
+Lines 6/7/8 in `Main.kt` are `Bad1`/`Bad2`/`Bad3`. The factory name `[FINAL_VIOLATED]` appears because each sample's `KotlinCompile` adds `-Xrender-internal-diagnostic-names` to `freeCompilerArgs`.
 
-Cross-checked against SPEC's "Common failure modes" (1–10):
+## Skill-doc usage and gaps
 
-1. **One JAR for both versions** — NOT triggered. Each plugin module pins its own `kotlin-compiler-embeddable` (2.2.20 vs 2.3.20) and its own KGP via per-subproject `buildscript {}`. Both samples actually load and execute the matching JAR (3 real diagnostics emitted under each compiler).
-2. **Overriding `pluginId` on 2.2** — NOT triggered. `plugin-2.2/.../FinalCheckerComponentRegistrar.kt` omits the line entirely.
-3. **NOT overriding `pluginId` on 2.3** — NOT triggered. `plugin-2.3/.../FinalCheckerComponentRegistrar.kt:16` has the override.
-4. **Value-parameter `check`** — NOT triggered. Both modules use `context(...)` form.
-5. **Missing `-Xcontext-parameters`** — NOT triggered. Both plugin modules add the flag in `freeCompilerArgs`.
-6. **Missing `-Xrender-internal-diagnostic-names`** — NOT triggered. Both samples add it (`sample-2.2/build.gradle.kts:36`, `sample-2.3/build.gradle.kts:34`); the `[FINAL_VIOLATED]` token appears in build output.
-7. **Single `plugins {}` block with conflicting versions** — NOT triggered. The build uses per-subproject `buildscript {}` blocks (the canonical workaround).
-8. **Wrong KGP per sample** — NOT triggered. sample-2.2 pins KGP 2.2.20 and sample-2.3 pins KGP 2.3.20.
-9. **Strategy not documented** — NOT triggered. `STRATEGY.md`, `settings.gradle.kts` comment, and per-file header comments on both ComponentRegistrars all explicitly name "Option A".
-10. **Direct `KtDiagnosticFactoryToRendererMap` constructor** — NOT triggered. Both versions use the `by` delegate.
+### What the skill docs got exactly right
 
-Other observation (not a listed failure mode):
+- **`multi-version-kotlin-support/guide.md`**: the per-subproject `buildscript {}` workaround for "two KGP versions in one Gradle build" is described verbatim (lines around the "Multiple Kotlin Gradle plugin versions in a single build" section). I applied that pattern unchanged for `sample-2.2` and `sample-2.3` and it worked first try.
+- **`multi-version-kotlin-support/guide.md`** also flags the `kotlin.compiler.execution.strategy=in-process` daemon-noise mitigation, which I copied into `gradle.properties`. The build is quiet.
+- **`fir-additional-checkers-extension/CHANGES.md`**: the table explicitly states that 2.2.20 and 2.3.x both use only the context-parameter `check` form. That let me write a single checker body for both overlays without trial-and-error.
+- **`fir-additional-checkers-extension/guide.md`**: the `KtDiagnosticFactoryToRendererMap` `by`-delegate pattern (instead of the now-internal constructor) was used as-is, and the `-Xrender-internal-diagnostic-names` flag for the consumer was applied where the guide instructs.
+- **`compiler-plugin-bootstrap/guide.md`**: the registrar / `META-INF/services` / `-Xplugin=` wiring transferred without modification. Reusing the example `gradlew`/`gradle/wrapper/` directly (per the task's "you may copy boilerplate" rule) cut bootstrap time substantially.
+- **`compiler-plugin-bootstrap/guide.md`'s `pluginId` gotcha**: the "exists since 2.3, absent on 2.2.20" callout is the exact knowledge that drove the per-overlay registrar split.
 
-- A vestigial `plugin-common/src/` directory exists with no source files and is not listed in `settings.gradle.kts`. It does not affect the build but appears to be an abandoned earlier attempt at Option B; removing it would be cleaner.
+### Minor gaps I worked around (not blockers)
 
-## Multi-version mechanics verdict
+- **The `-Xcontext-parameters` flag must be added on the plugin module's compile task** is stated in the additional-checkers guide. The multi-version guide doesn't explicitly remind the reader that both per-version plugin overlays still need it. (For a multi-version reader who only Reads `multi-version-kotlin-support/guide.md`, that detail lives one skill away — easy to miss for an agent that doesn't open the checkers guide first.) Adding a one-line cross-reference in `multi-version-kotlin-support/guide.md` ("each per-version plugin module still needs `-Xcontext-parameters` as described in the checkers guide") would close the gap.
+- **The `plugin-common` runtime story** isn't spelled out. With `implementation(project(":plugin-common"))` and a plain `jar` task (no shadowJar), `plugin-common`'s classes do **not** ship inside the per-version plugin JAR — the consumer's `-Xplugin=` only points to that JAR. This is harmless when `plugin-common` exposes only `const val` strings (Kotlin inlines them at compile time, which is the case here), but a reader who put non-constant code in `plugin-common` and shipped it the same way would see `NoClassDefFoundError` at the consumer's compile time. A short note in `multi-version-kotlin-support/guide.md` ("if you split out shared code, either keep it to `const val` constants or use shadowJar to bundle it into each per-version JAR") would be a useful guardrail. The current `gradle-plugin-integration/guide.md` covers shadowJar in general but doesn't say "in Option-B overlays, prefer const vals or bundle".
+- **`KotlinJvmProjectExtension` access from a `buildscript {}`-applied plugin**: when the sample's KGP is applied via `apply(plugin = ...)` rather than the `plugins {}` DSL, the typed `kotlin { jvmToolchain(21) }` accessor isn't generated. The workaround used here is `configure<org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension> { jvmToolchain(21) }`. A worked example in `multi-version-kotlin-support/guide.md` showing the `configure<...>` form alongside the `buildscript {}` block would prevent a likely mis-step.
+- **Spec criterion 8's verification grep** (`fun check\([^)]*CheckerContext[^)]*DiagnosticReporter`) would not match a context-parameter-form override that places the context on a separate line. The SPEC narrative is right (both plugins use the context-param form); the literal grep in the verification snippet is loose. Not a skill-doc problem — flagging here only for the evaluation maintainer.
 
-Correct. Per-subproject `buildscript {}` blocks pin distinct KGP versions (2.2.20 vs 2.3.20), with matching `kotlin-compiler-embeddable` `compileOnly` dependencies. The single legitimate source-level divergence (the `pluginId` override) is implemented exactly per-spec — present on 2.3, absent on 2.2. Each sample uses the matching toolchain and consumes the matching plugin JAR via a custom `compilerPlugin` configuration depending on `project(":plugin-2.x")`. Both samples actually fail compilation with three real `FINAL_VIOLATED` diagnostics each, demonstrating the plugin loads correctly under both Kotlin compilers — i.e. the multi-version split is not just structural but verified at runtime.
+### Things I did NOT need
 
-## Overall assessment
+- Reflective access (Strategy 2): unnecessary because the SPEC's API drift is exactly one line and the skill docs walked me through which line.
+- A compat-shim interface (Strategy 4): overkill for a two-version 2.2/2.3 split with one differing line.
+- A source preprocessor (Strategy 3): same.
+- `shadowJar`: the `plugin-common` constants inline, so each per-version JAR is self-contained.
 
-A near-perfect implementation. All twelve mandatory acceptance criteria pass against actual builds. The multi-version mechanics are correct (per-subproject `buildscript {}` pinning, context-parameter `check` overrides on both variants, `pluginId` present on 2.3 and absent on 2.2). `STRATEGY.md` clearly documents the chosen split. The only blemish is the leftover empty `plugin-common/src/` directory, costing one point on Code Quality readability.
+## Deviations from SPEC.md
 
-## Suggested skill fixes
+- I added `Final.kt` (the `annotation class Final`) directly under `sample-2.X/src/main/kotlin/com/example/finalchecker/` rather than reusing the `plugin-common` package. The SPEC's snippet states "annotation class Final" lives in user code, so having each sample own its own `Final.kt` mirrors the SPEC literally and avoids accidentally coupling the sample to `plugin-common`'s classpath.
+- I used `kotlin-compiler-embeddable:2.3.20` for the 2.3 plugin (matching the SPEC table), not `2.3.21`. The task header line says "Kotlin version validated against: 2.3.21" but the SPEC's per-subproject table says `2.3.20`. I followed the SPEC table.
+- I did not attempt the bonus criterion 13 (`-Pkotlin.version=` per-sample override). The two samples hard-code their KGP version.
 
-None — the agent applied skill guidance correctly throughout. The vestigial `plugin-common/` directory hints that `multi-version-kotlin-support/SKILL.md` could perhaps mention "if you choose Option A, delete any earlier `plugin-common/` scaffolding", but this is a polish suggestion rather than a doc bug.
+## Approximate iteration count
+
+3 rounds (rough): (1) wrote everything, (2) ran `:plugin-2.2:jar :plugin-2.3:jar` — first-try green, (3) ran each sample's `compileKotlin` — both produced the expected three errors first try. No debug loop on the Gradle multi-version plumbing — the skill's "buildscript {} per subproject" guidance was sufficient.
+
+## Verdict
+
+The consolidated `kotlin-compiler-plugin` skill provided everything needed for this task. The multi-version layer in particular felt complete: the `buildscript {}` workaround, the daemon-noise mitigation, the per-version `compileOnly` pattern, and the explicit "`pluginId` exists since 2.3" callout each saved a debug round. The two minor gaps I noted (cross-skill reminder about `-Xcontext-parameters` per per-version plugin; `plugin-common` runtime caveat; `configure<KotlinJvmProjectExtension>` for buildscript-applied plugins) are small documentation polish items, not failures.

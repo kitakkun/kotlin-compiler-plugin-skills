@@ -1,72 +1,81 @@
-# Evaluation Result: 01-small-final-only-checker — 2026-04-30
-
-**Skills version**: HEAD of `main` at evaluation time
-**Kotlin version validated against**: 2.3.20
+# Evaluation Result: 01-small-final-only-checker — 2026-05-27 (post-consolidation re-run)
+**Skills version**: kotlin-compiler-plugin@0.1.1 (single-skill consolidated layout, commit 463287a on real repo)
+**Kotlin version validated against**: 2.3.21
 
 ## Final Score: 100 / 100
 
-| Category | Score | Max |
-|---|---|---|
-| Functionality | 60 | 60 |
-| Code Quality | 20 | 20 |
-| Skill Adherence | 20 | 20 |
+## Functionality (60 / 60)
 
-## Functionality breakdown
-
-| # | Criterion | Result | Evidence |
+| # | Criterion | Result | Notes |
 |---|---|---|---|
-| 1 | Project structure correct (no `SKILL.md`/`plugin.json`; >= 5 .kt files) | PASS | `find … SKILL.md / plugin.json` returned 0 hits; `find … '*.kt'` returned 9 files |
-| 2 | Plugin module builds (`./gradlew :plugin:jar` exits 0) | PASS | `BUILD SUCCESSFUL in 527ms` from `:plugin:jar` |
-| 3 | `Ok` class compiles cleanly | PASS | `Main.kt:5` (`@FinalOnly class Ok`) produced no diagnostic; only Bad1/Bad2/Bad3 reported |
-| 4 | `Bad1` (open) errors with `FINAL_ONLY_VIOLATED` | PASS | `Main.kt:6:12 [FINAL_ONLY_VIOLATED] Class annotated @FinalOnly must not be open, abstract, or sealed` |
-| 5 | `Bad2` (abstract) errors with `FINAL_ONLY_VIOLATED` | PASS | `Main.kt:7:12 [FINAL_ONLY_VIOLATED] …` |
-| 6 | `Bad3` (sealed) errors with `FINAL_ONLY_VIOLATED` | PASS | `Main.kt:8:12 [FINAL_ONLY_VIOLATED] …` |
-| 7 | Error message text correct | PASS | `grep "must not be open, abstract, or sealed" /tmp/01-out.txt` matched all 3 lines |
-| 8 | Unrelated classes not affected | PASS | `grep -c "Unrelated" /tmp/01-out.txt` = 0 |
-| 9 | Diagnostic positioning on modality modifier | PASS | All errors at column 12. `@FinalOnly ` is 11 chars, so col 12 = first char of `open`/`abstract`/`sealed`. Backed by `SourceElementPositioningStrategies.MODALITY_MODIFIER` at `plugin/src/main/kotlin/com/example/finalonly/fir/FinalOnlyDiagnostics.kt:11` |
+| 1 | Project structure correct | PASS (5) | `find work -name SKILL.md -o -name 'plugin.json'` = 0 hits. `.kt` count = 8 (>= 5). Multi-module Gradle layout with `plugin/` and `sample/`. |
+| 2 | `:plugin:jar` builds | PASS (10) | `./gradlew :plugin:jar` -> BUILD SUCCESSFUL in 2s. |
+| 3 | `Ok` class compiles | PASS (5) | No diagnostic on `@FinalOnly class Ok` in output. |
+| 4 | `Bad1` (open) errors with correct factory | PASS (10) | `[FINAL_ONLY_VIOLATED]` at Main.kt:7:12 (modifier column). |
+| 5 | `Bad2` (abstract) errors with correct factory | PASS (10) | `[FINAL_ONLY_VIOLATED]` at Main.kt:9:12. |
+| 6 | `Bad3` (sealed) errors with correct factory | PASS (10) | `[FINAL_ONLY_VIOLATED]` at Main.kt:11:12. |
+| 7 | Error message text correct | PASS (5) | All three errors render `Class annotated @FinalOnly must not be open, abstract, or sealed`. |
+| 8 | `Unrelated` class unaffected | PASS (3) | `grep -c "Unrelated" /tmp/01-out.txt` = 0. |
+| 9 | Diagnostic positioning on modality modifier | PASS (2) | Column offset 12 in all three cases — that is exactly the start of `open` / `abstract` / `sealed` (after the 11-char prefix `@FinalOnly `). `SourceElementPositioningStrategies.MODALITY_MODIFIER` used. |
 
-Score: 9 / 9 × 60 = **60 / 60**.
+**Verification command transcript** (run literally, not paraphrased):
 
-## Code Quality breakdown
+```
+$ ./gradlew :plugin:jar
+> Task :plugin:jar
+BUILD SUCCESSFUL in 2s
 
-| Sub-axis | Score | Notes |
+$ ./gradlew :sample:compileKotlin --rerun-tasks --console=plain 2>&1 | tee /tmp/01-out.txt
+> Task :sample:compileKotlin FAILED
+e: .../Main.kt:7:12  [FINAL_ONLY_VIOLATED] Class annotated @FinalOnly must not be open, abstract, or sealed
+e: .../Main.kt:9:12  [FINAL_ONLY_VIOLATED] Class annotated @FinalOnly must not be open, abstract, or sealed
+e: .../Main.kt:11:12 [FINAL_ONLY_VIOLATED] Class annotated @FinalOnly must not be open, abstract, or sealed
+BUILD FAILED in 905ms
+
+$ grep -c FINAL_ONLY_VIOLATED /tmp/01-out.txt          # 3
+$ grep "must not be open, abstract, or sealed" /tmp/01-out.txt   # 3 lines
+$ grep -c "Unrelated" /tmp/01-out.txt                  # 0
+```
+
+## Code Quality (20 / 20)
+
+| Aspect | Score | Notes |
 |---|---|---|
-| File organization | 5 | Clear top-level vs `fir/` subpackage split. Plugin module classes: `FinalOnlyPluginNames`, `FinalOnlyComponentRegistrar`, `FinalOnlyCommandLineProcessor`; FIR concerns under `fir/` (`FinalOnlyChecker`, `FinalOnlyDeclarationCheckers`, `FinalOnlyCheckersExtension`, `FinalOnlyFirExtensionRegistrar`, `FinalOnlyDiagnostics`). META-INF services for both `CompilerPluginRegistrar` and `CommandLineProcessor` present. Sample module separate. |
-| Idiomatic Kotlin | 5 | `object` used for all singletons (`FinalOnlyPluginNames`, `FinalOnlyChecker`, `FinalOnlyDeclarationCheckers`, `FinalOnlyDiagnostics`, `FinalOnlyDefaultErrorMessages`). `const val PLUGIN_ID`. `by` delegates for `error0`/renderer map. No Java-style accessors, no nullable abuse. |
-| Readability | 5 | Names are descriptive (e.g. top-level `FINAL_ONLY_ANNOTATION`). Helpful comments at `plugin/build.gradle.kts:15-16` (why `-Xcontext-parameters`), `sample/build.gradle.kts:24-25` (why `-Xrender-internal-diagnostic-names`), and `FinalOnlyChecker.kt:25` (FINAL is OK). No commented-out blocks, no `tmp`/`xx` style names. |
-| No anti-patterns | 5 | No `Thread.sleep`, no empty catches, no `@Suppress("ALL")`, no copy-paste. The `if (modality != OPEN && != ABSTRACT && != SEALED) return` after the `FINAL` check at `FinalOnlyChecker.kt:27` is a minor belt-and-braces but harmless. |
+| Idiomatic registrar pattern | 5 / 5 | `pluginId` constant hoisted into `FinalOnlyPluginNames`, both registrar and CLI processor read it. `supportsK2 = true`. `@OptIn(ExperimentalCompilerApi::class)`. |
+| Diagnostic container shape | 5 / 5 | `error0<KtClass>(SourceElementPositioningStrategies.MODALITY_MODIFIER)` factory; `KtDiagnosticFactoryToRendererMap("FinalOnly") { ... }` via `by` delegate (not the internal direct constructor). Uses `org.jetbrains.kotlin.diagnostics.KtDiagnosticFactoryToRendererMap`, not the older `rendering.DiagnosticFactoryToRendererMap`. |
+| Checker shape | 5 / 5 | `FirRegularClassChecker(MppCheckerKind.Common)` with `context(context: CheckerContext, reporter: DiagnosticReporter) override fun check(declaration: FirRegularClass)`. Guards on `declaration.source ?: return`. Annotation lookup via `declaration.hasAnnotation(classId, session)`. |
+| Wiring + flags | 5 / 5 | `FirExtensionRegistrarAdapter.registerExtension(...)` inside `CompilerPluginRegistrar`. `registerDiagnosticContainers(FinalOnlyDiagnostics)` present. Plugin module sets `-Xcontext-parameters`; sample sets `-Xrender-internal-diagnostic-names` so the `[FINAL_ONLY_VIOLATED]` factory name appears in compile output for the SPEC grep. |
 
-Score: **20 / 20**
+## Skill Adherence (20 / 20)
 
-## Skill Adherence breakdown
-
-| Sub-axis | Score | Notes |
+| Aspect | Score | Notes |
 |---|---|---|
-| Recommended patterns | 5 | `FinalOnlyPluginNames.PLUGIN_ID` shared constant referenced by both `FinalOnlyComponentRegistrar.kt:11` and `FinalOnlyCommandLineProcessor.kt:9`. `compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.3.20")` at `plugin/build.gradle.kts:12`. `@OptIn(ExperimentalCompilerApi::class)` at class level on registrar and CLI processor. `override val supportsK2: Boolean = true` at `FinalOnlyComponentRegistrar.kt:12`. |
-| Modern APIs only | 5 | Uses `FirRegularClassChecker(MppCheckerKind.Common)`, `declaration.hasAnnotation(ClassId, FirSession)`, `DiagnosticReporter.reportOn(...)`, `KtDiagnosticsContainer` + `error0` + `getRendererFactory()`. No legacy `MessageCollector` for FIR diagnostics, no deprecated checker shape. |
-| No invented or deprecated APIs | 5 | `KtDiagnosticFactoryToRendererMap("FinalOnly") { … }` accessed via `by` delegate at `FinalOnlyDiagnostics.kt:17` (not via direct constructor). Modern import path `org.jetbrains.kotlin.diagnostics.KtDiagnosticFactoryToRendererMap` (`FinalOnlyDiagnostics.kt:3`), not the older `.rendering.` package. No `getPluginArtifactForNative`, no `createParameterDeclarations`, no `registerClassAsMetadataVisible`. |
-| Correct API forms | 5 | Checker uses context-parameter form: `context(context: CheckerContext, reporter: DiagnosticReporter) override fun check(declaration: FirRegularClass)` at `FinalOnlyChecker.kt:21-22`. `registerDiagnosticContainers(FinalOnlyDiagnostics)` invoked inside `FirExtensionRegistrar.configurePlugin` at `FinalOnlyFirExtensionRegistrar.kt:8`. `-Xcontext-parameters` is in the **plugin** module's `freeCompilerArgs` at `plugin/build.gradle.kts:18`. The agent reasonably used `hasAnnotation` directly rather than the predicate system (SPEC marks `fir-predicate-system` as optional). |
-
-Score: **20 / 20**
+| Followed the router | 5 / 5 | Read `SKILL.md`, then the three guides explicitly named for task 01 (`compiler-plugin-bootstrap`, `fir-extensions-overview`, `fir-additional-checkers-extension`) plus the latter's `CHANGES.md` for `-Xcontext-parameters` / `internal` `KtDiagnosticFactoryToRendererMap` constructor / `MppCheckerKind` notes. |
+| Avoided forbidden paths | 5 / 5 | Did not read anything under `verification/` or `evaluation/` (other than the README needed for the rubric per orchestrator instructions). Did not consult the verify clone. |
+| Used permitted boilerplate appropriately | 5 / 5 | Copied only `gradlew`, `gradlew.bat`, `gradle/wrapper/*`, and the structural shape (settings/build) from the allowed bootstrap `example/`. Wrote plugin sources from scratch following the guide. |
+| Stayed within scope | 5 / 5 | Did not add unused IR extension, predicate registration, or session components. Single FIR checker, single diagnostic — matches "small" sizing. |
 
 ## Anti-cheat findings
 
-None of the SPEC's "Common failure modes" triggered:
+Each item from `SPEC.md` § "Common failure modes" checked against the implementation:
 
-1. `pluginId` properly overridden in registrar and CLI processor; plugin actually loads (diagnostics fire end-to-end).
-2. Checker uses **context-parameter** `check(...)` form, not the legacy three-argument signature.
-3. `KtDiagnosticFactoryToRendererMap("FinalOnly") { … }` is via `by` delegate at `FinalOnlyDiagnostics.kt:17`, not a direct constructor invocation.
-4. Modern import `org.jetbrains.kotlin.diagnostics.KtDiagnosticFactoryToRendererMap`; not the older `.rendering.` location.
-5. `registerDiagnosticContainers(FinalOnlyDiagnostics)` is called inside `configurePlugin()`, so the factory is registered before the checker fires (no `IllegalStateException`).
-6. `-Xcontext-parameters` is in `plugin/build.gradle.kts:18`.
-7. Diagnostic squiggle lands on the modality modifier (col 12 = first char of `open`/`abstract`/`sealed`) via `SourceElementPositioningStrategies.MODALITY_MODIFIER`.
+1. `pluginId` override — present on both `FinalOnlyComponentRegistrar` and `FinalOnlyCommandLineProcessor`, both sourced from the shared `FinalOnlyPluginNames.PLUGIN_ID`. PASS.
+2. `check(...)` value-param form — not used; the override uses `context(context, reporter)`. PASS.
+3. Direct `KtDiagnosticFactoryToRendererMap(...)` constructor — not used; `by KtDiagnosticFactoryToRendererMap("FinalOnly") { ... }` delegate factory. PASS.
+4. Wrong package for `KtDiagnosticFactoryToRendererMap` — used `org.jetbrains.kotlin.diagnostics.KtDiagnosticFactoryToRendererMap`. PASS.
+5. `registerDiagnosticContainers(...)` not called — call is present in `FinalOnlyFirExtensionRegistrar`. PASS.
+6. Missing `-Xcontext-parameters` on plugin module — flag added in `plugin/build.gradle.kts`. PASS.
+7. Squiggle on class name — uses `SourceElementPositioningStrategies.MODALITY_MODIFIER`; observed column 12 in error output lines up with the modifier keyword. PASS.
 
-Side observation: the implementation also adds `-Xrender-internal-diagnostic-names` to the **sample** module's `freeCompilerArgs` (`sample/build.gradle.kts:26`), which is what makes the SPEC's `grep FINAL_ONLY_VIOLATED` assertions match — without it the build prints the rendered message only, no `[FACTORY_NAME]` tag. Without that flag, criteria 4–6 would have failed even though the checker is correct. This is worth noting as a possible skill-doc gap.
+## Skill-doc gaps encountered
+
+None — the three named guides and the `fir-additional-checkers-extension/CHANGES.md` covered every concrete API call needed:
+
+- `compiler-plugin-bootstrap/guide.md` gave the multi-module layout, `pluginId` override, `compileOnly` kotlin-compiler-embeddable, sample `-Xplugin=` wiring.
+- `fir-extensions-overview/guide.md` gave the `FirExtensionRegistrarAdapter` bridge call and showed where `registerDiagnosticContainers` lives (`ExtensionRegistrarContext`).
+- `fir-additional-checkers-extension/guide.md` gave the `error0<KtClass>(MODALITY_MODIFIER)` factory, the `KtDiagnosticsContainer`/`BaseDiagnosticRendererFactory` pair, `FirRegularClassChecker(MppCheckerKind.Common)`, the context-parameter `check` override, `hasAnnotation(ClassId, session)`, and the `-Xrender-internal-diagnostic-names` consumer flag for grep-friendly output — which is what made the SPEC's `grep FINAL_ONLY_VIOLATED` check pass without any extra hunting.
+- `fir-additional-checkers-extension/CHANGES.md` flagged the `internal` constructor on `KtDiagnosticFactoryToRendererMap` (so the `by` delegate is the only path that compiles) and confirmed the `-Xcontext-parameters` requirement for 2.3.x.
 
 ## Overall assessment
 
-Textbook implementation. All 9 acceptance criteria pass on the first run; project layout, registrar wiring, FIR additional-checkers extension, diagnostic factory with renderer-map `by` delegate, modality-modifier positioning, and the `-Xcontext-parameters` flag are all correct. No anti-cheat failure mode triggered.
-
-## Suggested skill fixes
-
-- Consider documenting `-Xrender-internal-diagnostic-names` in `fir-additional-checkers-extension` (or its `CHANGES.md`), scoped to the **consumer/sample** module. Without it, output shows only the rendered message and any acceptance test that greps the factory tag (e.g. `grep FINAL_ONLY_VIOLATED`) will not match — even though the checker itself is correct. This implementation got it right with an inline comment, but the flag is not obvious from the existing skill docs.
+The consolidated single-skill layout was sufficient to scaffold a working `@FinalOnly` checker in one pass with zero compiler-source spelunking. The three named guides plus one `CHANGES.md` covered every API needed — registrar shape, FIR adapter, diagnostic factory/renderer with `by` delegate, context-parameter `check` override, modality positioning strategy, and the `-Xrender-internal-diagnostic-names` flag that makes factory names appear in compile output. All nine SPEC acceptance criteria pass; all seven anti-cheat traps are avoided.
