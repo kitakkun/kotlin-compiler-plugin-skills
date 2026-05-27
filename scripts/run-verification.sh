@@ -6,11 +6,12 @@
 # without spatial access to:
 #   - other verification/* directories (would leak the API patterns we want to test)
 #   - evaluation/ (different concern, but isolated for symmetry)
-#   - skills/compiler-plugin-bootstrap/example/ (allowed only via the bootstrap skill's pointer; the runner does not copy it)
+#   - skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/example/
+#     (allowed only via the bootstrap reference's pointer; the runner does not copy it)
 #
 # Use this when re-validating after a Kotlin compiler version bump, or to
-# audit whether a skill change still suffices for an agent to implement
-# the corresponding extension.
+# audit whether a reference-guide change still suffices for an agent to
+# implement the corresponding extension.
 #
 # Caveat: the agent retains shell/Read access to absolute paths. For a strict
 # trust boundary, run Claude Code with permissions limited to the sandbox dir.
@@ -53,7 +54,7 @@ Re-implement the plugin described in \`SPEC.md\` from scratch under this directo
 ## Constraints
 
 - Use **only** the installed \`kotlin-compiler-plugin-skills\`.
-- Do **not** consult \`verification/\` (including the saved implementation of this very task), \`evaluation/\`, or \`skills/compiler-plugin-bootstrap/example/\` in the source repo.
+- Do **not** consult \`verification/\` (including the saved implementation of this very task), \`evaluation/\`, or \`skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/example/\` in the source repo.
 - The working directory is intentionally empty — create \`plugin/\`, \`sample/\`, \`settings.gradle.kts\`, etc. as needed.
 
 ## Reporting

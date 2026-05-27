@@ -1,6 +1,6 @@
 # Kotlin Compiler Plugin Skills
 
-A Claude Code plugin that bundles **24 documentation skills** for Kotlin compiler plugin development. Use it when building K2 (FIR) frontend extensions, IR backend transformations, custom diagnostics, synthetic declarations, scripting / REPL dialects, or shipping a compiler plugin via Gradle.
+A Claude Code plugin shipping a single skill, `kotlin-compiler-plugin`, that bundles **24 reference guides** covering Kotlin compiler plugin development. Use it when building K2 (FIR) frontend extensions, IR backend transformations, custom diagnostics, synthetic declarations, scripting / REPL dialects, or shipping a compiler plugin via Gradle.
 
 Every API claim is cross-referenced against the [Kotlin compiler source](https://github.com/JetBrains/kotlin) (2.3.x).
 
@@ -13,16 +13,18 @@ In Claude Code, register this repo as a plugin marketplace, then install the plu
 /plugin install kotlin-compiler-plugin-skills@kotlin-compiler-plugin-skills
 ```
 
-Skills are auto-discovered after install; list them via `/plugin`.
+The single `kotlin-compiler-plugin` skill is auto-discovered after install; list it via `/plugin`. Its router `SKILL.md` lives at `skills/kotlin-compiler-plugin/SKILL.md` and the per-topic guides under `skills/kotlin-compiler-plugin/references/<topic>/guide.md`. The router triggers on any Kotlin-compiler-plugin task and Claude reads only the references the task actually needs.
 
-Install footprint: the full repo is copied to `~/.claude/plugins/cache/` (a few MB). Only `skills/` files are loaded into Claude's context — the bundled `verification/` (13 working reference plugins) and `evaluation/` (6 benchmark tasks) sit on disk for you to inspect locally and never enter the token budget.
+Install footprint: the full repo is copied to `~/.claude/plugins/cache/` (a few MB). Only the skill's `SKILL.md` is auto-loaded into Claude's context — each reference's `guide.md` is read on demand, and the bundled `verification/` (13 working reference plugins) and `evaluation/` (6 benchmark tasks) sit on disk for you to inspect locally and never enter the token budget.
 
 To uninstall: `/plugin uninstall kotlin-compiler-plugin-skills@kotlin-compiler-plugin-skills`.
 
 ## What's included
 
+The plugin ships one skill at `skills/kotlin-compiler-plugin/`. Its `references/` directory contains the 24 topic guides below.
+
 ### Foundation
-| Skill | When to use |
+| Topic | When to read |
 |---|---|
 | `compiler-plugin-bootstrap` | Scaffolding a new Kotlin compiler plugin project from scratch |
 | `compiler-plugin-debugging` | Setting up `MessageCollector`, IR dumps, debugger attach |
@@ -31,7 +33,7 @@ To uninstall: `/plugin uninstall kotlin-compiler-plugin-skills@kotlin-compiler-p
 | `multi-version-kotlin-support` | Supporting multiple Kotlin compiler versions in one plugin |
 
 ### FIR (K2 frontend) extensions
-| Skill | What it covers |
+| Topic | What it covers |
 |---|---|
 | `fir-extensions-overview` | Architecture, the 18 extension points, FirSession lifecycle, how to choose |
 | `fir-predicate-system` | Declarative annotation matching DSL (`annotated`, `parentAnnotated`, etc.) |
@@ -50,7 +52,7 @@ To uninstall: `/plugin uninstall kotlin-compiler-plugin-skills@kotlin-compiler-p
 | `fir-repl-snippet-extensions` | Implement a REPL / Jupyter-style dialect with cross-snippet visibility — `FirReplSnippetConfiguratorExtension`, `FirReplSnippetResolveExtension`, `Fir2IrReplSnippetConfiguratorExtension`, `FirReplHistoryProvider` |
 
 ### IR (backend) transformations
-| Skill | What it covers |
+| Topic | What it covers |
 |---|---|
 | `ir-plugincontext-usage` | Symbol lookup, diagnostic reporting, and metadata registration — the foundation API for any IR extension |
 | `ir-call-rewriting` | Replace function calls in user code with calls to a different function |
@@ -86,10 +88,10 @@ The repo has three top-level directories of working Gradle projects, each with a
 
 | Directory | Purpose | Style |
 |---|---|---|
-| `verification/` | Fine-grained probes — one project per claim in the skills (one per row of the "How to choose" table in `fir-extensions-overview`, plus cross-cutting probes for cross-module IR visibility and alternate status-transformer slots) | 13 self-contained plugin + sample setups; each ships a `SPEC.md` and `RESULT.md` |
-| `evaluation/` | End-to-end agent benchmarks — fixed implementation tasks of increasing complexity that measure how well a fresh Claude agent can produce a working plugin from the skills alone | 6 tasks; each ships a `SPEC.md` and `RESULT.md`; see `evaluation/README.md` for rubric |
+| `verification/` | Fine-grained probes — one project per claim in the reference guides (one per row of the "How to choose" table in `fir-extensions-overview`, plus cross-cutting probes for cross-module IR visibility and alternate status-transformer slots) | 13 self-contained plugin + sample setups; each ships a `SPEC.md` and `RESULT.md` |
+| `evaluation/` | End-to-end agent benchmarks — fixed implementation tasks of increasing complexity that measure how well a fresh Claude agent can produce a working plugin from the skill alone | 6 tasks; each ships a `SPEC.md` and `RESULT.md`; see `evaluation/README.md` for rubric |
 
-The minimal didactic example for the bootstrap skill lives at `skills/compiler-plugin-bootstrap/example/` (`hello-plugin`) — co-located with the skill that uses it.
+The minimal didactic example for the bootstrap guide lives at `skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/example/` (`hello-plugin`) — co-located with the guide that uses it.
 
 When re-running evaluations or verifications you need to keep the agent honest, use the sandbox runners in `scripts/`:
 
@@ -102,16 +104,16 @@ Each creates a tempdir containing only the task's `SPEC.md`. The agent works the
 
 ## Compatibility
 
-- **Kotlin**: targets the **latest stable** (currently 2.3.x). Skills are written assuming the current version; for upgrading from older Kotlin compilers see the per-skill `CHANGES.md`.
+- **Kotlin**: targets the **latest stable** (currently 2.3.x). Reference guides are written assuming the current version; for upgrading from older Kotlin compilers see the per-topic `CHANGES.md`.
 - **Gradle**: 9.5.0+ recommended; 8.x mostly works for the user-facing patterns
-- **JDK**: 21+ for compilation. Java 25 currently exposes a Kotlin BTAPI bug — see `skills/compiler-plugin-bootstrap/SKILL.md` for the workaround.
+- **JDK**: 21+ for compilation. Java 25 currently exposes a Kotlin BTAPI bug — see `skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/guide.md` for the workaround.
 
 ## Versioning policy
 
 The plugin uses standard [semver](https://semver.org/) for its own version, **independent of the Kotlin compiler version**:
 
 - **MAJOR** — breaking change to skill structure, install procedure, or naming
-- **MINOR** — new skills added, or substantial rewrites that change a skill's recommended approach
+- **MINOR** — new reference guides added, or substantial rewrites that change a guide's recommended approach
 - **PATCH** — fixes, clarifications, additional gotchas, code-sample corrections
 
 Kotlin compatibility is tracked separately. Each release validates against a specific Kotlin version range; the **Compatibility matrix** below maps plugin versions to the Kotlin versions they were tested against.
@@ -120,25 +122,28 @@ Kotlin compatibility is tracked separately. Each release validates against a spe
 
 ```
 skills/
-├── compiler-plugin-bootstrap/
-│   ├── SKILL.md       # current best practice for the supported Kotlin range
-│   ├── CHANGES.md     # what changed across Kotlin versions (only present when there's something to record)
-│   └── EVIDENCE.md    # primary-source citations for non-obvious claims (file:line in JetBrains/kotlin)
-├── ...
+└── kotlin-compiler-plugin/
+    ├── SKILL.md           # router — orients Claude and lists every reference
+    └── references/
+        ├── compiler-plugin-bootstrap/
+        │   ├── guide.md       # current best practice for the supported Kotlin range
+        │   ├── CHANGES.md     # what changed across Kotlin versions (only present when there's something to record)
+        │   └── EVIDENCE.md    # primary-source citations for non-obvious claims (file:line in JetBrains/kotlin)
+        ├── ...
 ```
 
-`EVIDENCE.md` lets a reviewer (or a future Claude session) spot-check any claim in the SKILL.md against the upstream Kotlin compiler source without re-grepping. Each entry pairs a claim with a `kotlin/<path>:line` citation; some include a code snippet. Not all skills have one — only those with claims a careful reader would want to verify.
+`EVIDENCE.md` lets a reviewer (or a future Claude session) spot-check any claim in `guide.md` against the upstream Kotlin compiler source without re-grepping. Each entry pairs a claim with a `kotlin/<path>:line` citation; some include a code snippet. Not all references have one — only those with claims a careful reader would want to verify.
 
-When a plugin author upgrades their Kotlin compiler and their plugin stops compiling, the relevant `CHANGES.md` walks them through the API migration. Skills with no `CHANGES.md` had no API churn worth singling out.
+When a plugin author upgrades their Kotlin compiler and their plugin stops compiling, the relevant `CHANGES.md` walks them through the API migration. References with no `CHANGES.md` had no API churn worth singling out.
 
 When Kotlin ships a new minor (e.g. 2.4):
 
-1. Skills are validated against the new Kotlin; broken ones updated.
+1. References are validated against the new Kotlin; broken ones updated.
 2. Each affected `CHANGES.md` gains a `## Kotlin 2.3 → 2.4` section.
 3. A new plugin release is cut — the version bump follows semver normally (PATCH if just docs, MINOR if a recommended approach changes).
 4. The Compatibility matrix in this README is updated.
 
-For plugin authors writing code that targets multiple Kotlin compiler versions, see the `multi-version-kotlin-support` skill.
+For plugin authors writing code that targets multiple Kotlin compiler versions, see the `multi-version-kotlin-support` reference guide.
 
 ### Compatibility matrix
 
@@ -149,13 +154,13 @@ For plugin authors writing code that targets multiple Kotlin compiler versions, 
 
 ## Contributing
 
-Issues and pull requests welcome. Each skill carries a YAML frontmatter `description` field that controls when Claude invokes it; please keep changes consistent with the existing tone (concrete, with code samples, with negative scoping).
+Issues and pull requests welcome. The skill's `SKILL.md` carries a YAML frontmatter `description` field that controls when Claude invokes the skill, and each reference's `guide.md` describes its own scope; please keep changes consistent with the existing tone (concrete, with code samples, with negative scoping).
 
 ## License
 
 MIT — see [`LICENSE`](LICENSE).
 
-The skill documents quote and reference code from several Apache-2.0 projects
+The reference guides quote and reference code from several Apache-2.0 projects
 (JetBrains/kotlin, Kotlin/compiler-plugin-template, ZacSweers/metro,
 Kotlin/kotlinx-rpc). Original copyright applies to those quotations and the
 quoted material remains under Apache-2.0; see [`NOTICE.md`](NOTICE.md) for the

@@ -4,7 +4,7 @@ Six compiler plugin implementation tasks of increasing complexity, designed to m
 
 ## Why this exists
 
-The skills in `skills/` document the Kotlin compiler plugin API. They're only useful if a Claude session can read them and produce a working plugin. This evaluation suite gives a repeatable, scorable harness for measuring that:
+The `kotlin-compiler-plugin` skill in `skills/` documents the Kotlin compiler plugin API. It's only useful if a Claude session can read it and produce a working plugin. This evaluation suite gives a repeatable, scorable harness for measuring that:
 
 - **Pass** = the plugin builds, runs, and meets every acceptance criterion in `SPEC.md`.
 - **Fail** = anything breaks.

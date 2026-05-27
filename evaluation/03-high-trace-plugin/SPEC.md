@@ -54,7 +54,7 @@ The test should:
 ```
 evaluation/03-high-trace-plugin/work/
 ├── settings.gradle.kts, gradle.properties, build.gradle.kts
-├── gradle/, gradlew      ← copy from skills/compiler-plugin-bootstrap/example/
+├── gradle/, gradlew      ← copy from skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/example/
 ├── plugin/
 │   └── src/test/kotlin/com/example/trace/TraceTest.kt   ← optional but recommended
 └── sample/

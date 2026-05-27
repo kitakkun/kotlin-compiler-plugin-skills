@@ -28,7 +28,7 @@ Apache License 2.0**, not this repository's MIT License.
 
   Source: <https://github.com/JetBrains/kotlin/blob/master/license/NOTICE.txt>
 
-- Quoted in: most skills under `skills/`, primarily for compiler API surface
+- Quoted in: most reference guides under `skills/kotlin-compiler-plugin/references/`, primarily for compiler API surface
   (`CompilerPluginRegistrar`, `IrMemberAccessExpression`, `KotlinCompilerVersion`,
   `IrFunction.parameters`, `FirScriptConfiguratorExtension`,
   `FirScriptResolutionConfigurationExtension`, `Fir2IrScriptConfiguratorExtension`,
@@ -49,7 +49,7 @@ Apache License 2.0**, not this repository's MIT License.
 
 - Repository: <https://github.com/Kotlin/compiler-plugin-template>
 - License: Apache License 2.0 (`LICENSE.txt` in that repository)
-- Quoted in: `skills/compiler-plugin-testing/{SKILL,EVIDENCE}.md`, primarily
+- Quoted in: `skills/kotlin-compiler-plugin/references/compiler-plugin-testing/{guide,EVIDENCE}.md`, primarily
   for the `compiler-plugin/build.gradle.kts` test configuration (dependency
   set, `setLibraryProperty`, `tasks.test` system properties), the abstract
   test runner classes (`AbstractJvmDiagnosticTest`, `AbstractJvmBoxTest`),
@@ -68,7 +68,7 @@ Apache License 2.0**, not this repository's MIT License.
   SPDX-License-Identifier: Apache-2.0
   ```
 
-- Quoted in: `skills/multi-version-kotlin-support/{SKILL,EVIDENCE}.md`,
+- Quoted in: `skills/kotlin-compiler-plugin/references/multi-version-kotlin-support/{guide,EVIDENCE}.md`,
   primarily for the `CompatContext` compat-shim interface and its
   `@CompatApi(since=, reason=, message=)` annotation, the dev-track-aware
   `resolveFactoryForVersion` resolver, the `compiler-compat/k*/`
@@ -87,7 +87,7 @@ Apache License 2.0**, not this repository's MIT License.
   Use of this source code is governed by the Apache 2.0 license.
   ```
 
-- Quoted in: `skills/multi-version-kotlin-support/{SKILL,EVIDENCE}.md`,
+- Quoted in: `skills/kotlin-compiler-plugin/references/multi-version-kotlin-support/{guide,EVIDENCE}.md`,
   primarily for the CSM (Compiler-Specific Modules) directive syntax
   (`//##csm`, `//##csm specific=[range]`, `//##csm default`), the
   `CsmTemplateProcessor` template engine (`matchesKotlinVersion`), the
@@ -101,11 +101,11 @@ Apache License 2.0**, not this repository's MIT License.
 
 ## Scope clarification
 
-The skill documents in this repository are pedagogical: they describe and
+The reference guides in this repository are pedagogical: they describe and
 contextualise patterns that appear in the upstream projects above. Quotations
 are limited to what is necessary to make the patterns concrete and verifiable.
 For each substantial quotation, the source is identified by URL and pinned
-commit / tag in the corresponding `EVIDENCE.md` file or inline in `SKILL.md`.
+commit / tag in the corresponding `EVIDENCE.md` file or inline in `guide.md`.
 
 This NOTICE supplements those inline pointers and exists primarily to satisfy
 Apache 2.0 § 4(b) and § 4(d) attribution and notice-preservation requirements

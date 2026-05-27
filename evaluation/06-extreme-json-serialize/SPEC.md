@@ -189,7 +189,7 @@ The fact that `User.parse(...)` resolves cleanly in module-B is the verification
 ```
 evaluation/06-extreme-json-serialize/work/
 ├── settings.gradle.kts, gradle.properties, build.gradle.kts
-├── gradle/, gradlew, gradlew.bat                   ← copy from skills/compiler-plugin-bootstrap/example/
+├── gradle/, gradlew, gradlew.bat                   ← copy from skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/example/
 ├── plugin/
 │   └── src/main/kotlin/com/example/json/
 │       ├── JsonPluginNames.kt
@@ -301,7 +301,7 @@ grep -F 'order ok: SKU-1' /tmp/06-out.txt
 - `/Users/kitakkun/Documents/GitHub/kotlin-lang/plugins/kotlinx-serialization/` — this is the canonical reference and the spiritual ancestor of this evaluation's design. Reading it amounts to copying. The agent must produce equivalent code from skill docs only.
 - `/Users/kitakkun/Documents/GitHub/kotlin-lang/plugins/parcelize/` — also off-limits (similar pattern of FIR declaration + IR fill + companion-style factory).
 
-`skills/compiler-plugin-bootstrap/example/` is allowed for project boilerplate.
+`skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/example/` is allowed for project boilerplate.
 
 ## Common failure modes (anti-cheat)
 
@@ -330,4 +330,4 @@ This task carries **5× the weight** of the small task in overall scoring, refle
 
 ## Pre-existing reference
 
-`skills/compiler-plugin-bootstrap/example/` for project boilerplate. The agent may also extend the multi-module pattern from `evaluation/05-multiversion-final-checker/`'s STRATEGY documentation but **not** copy its implementation source. (The 05 work/ directory is forbidden per the policy above.)
+`skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/example/` for project boilerplate. The agent may also extend the multi-module pattern from `evaluation/05-multiversion-final-checker/`'s STRATEGY documentation but **not** copy its implementation source. (The 05 work/ directory is forbidden per the policy above.)

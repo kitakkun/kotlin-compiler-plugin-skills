@@ -80,7 +80,7 @@ evaluation/05-multiversion-final-checker/work/
 ├── settings.gradle.kts            ← includes plugin-common, plugin-2.2, plugin-2.3, sample-2.2, sample-2.3
 ├── build.gradle.kts
 ├── gradle.properties              ← can default Kotlin version, but builds use per-subproject pinning
-├── gradle/, gradlew, gradlew.bat  ← copy from skills/compiler-plugin-bootstrap/example/
+├── gradle/, gradlew, gradlew.bat  ← copy from skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/example/
 ├── plugin-common/                 ← (if using Option B)
 │   └── src/main/kotlin/com/example/finalchecker/FinalCheckerPluginNames.kt
 ├── plugin-2.2/
@@ -184,7 +184,7 @@ grep -rE 'context\([^)]*CheckerContext[^)]*DiagnosticReporter\)' plugin-2.3/src
 - `/Users/kitakkun/Documents/GitHub/kotlin-compiler-plugin-skills/evaluation/01-small-final-only-checker/work/` — previous evaluation answer; the SPEC of 01 is allowed but not the work/ directory's source code
 - `/Users/kitakkun/Documents/GitHub/kotlin-compiler-plugin-skills/evaluation/02-medium-auto-stringify/work/`, `03-high-trace-plugin/work/`, `04-veryhigh-positive-negative-types/work/`
 
-`skills/compiler-plugin-bootstrap/example/` is allowed for project structure boilerplate.
+`skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/example/` is allowed for project structure boilerplate.
 
 ## Common failure modes (anti-cheat)
 
@@ -211,4 +211,4 @@ This task carries **3× the weight** of the small task in overall scoring, refle
 
 ## Pre-existing reference
 
-`skills/compiler-plugin-bootstrap/example/` provides single-version boilerplate. The agent must extend that pattern for two versions.
+`skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/example/` provides single-version boilerplate. The agent must extend that pattern for two versions.

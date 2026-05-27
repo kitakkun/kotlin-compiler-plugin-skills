@@ -6,9 +6,9 @@
 # with no spatial access to:
 #   - other evaluation/* directories (would leak answer keys for the multi-task suite)
 #   - verification/ (would leak working implementations of the underlying APIs)
-#   - skills/compiler-plugin-bootstrap/example/ (allowed only insofar as the
-#     bootstrap skill points at it; the runner does not copy it but cannot
-#     block global filesystem reads)
+#   - skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/example/
+#     (allowed only insofar as the bootstrap reference points at it; the runner
+#     does not copy it but cannot block global filesystem reads)
 #
 # Caveat: an agent with shell/Read access can still resolve absolute paths to
 # this repo. This runner provides spatial isolation (the sandbox CWD has only
@@ -53,7 +53,7 @@ Implement the plugin described in \`SPEC.md\` from scratch under this directory.
 ## Constraints
 
 - Use **only** the installed \`kotlin-compiler-plugin-skills\` (skills auto-discover via \`/plugin\`).
-- Do **not** consult \`verification/\`, \`skills/compiler-plugin-bootstrap/example/\`, or any other \`evaluation/\` subdirectory in the source repo, even by absolute path. They contain reference implementations that constitute answer keys.
+- Do **not** consult \`verification/\`, \`skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/example/\`, or any other \`evaluation/\` subdirectory in the source repo, even by absolute path. They contain reference implementations that constitute answer keys.
 - The working directory is intentionally empty — create \`plugin/\`, \`sample/\`, \`settings.gradle.kts\`, etc. as needed following the patterns in the skills.
 
 ## Reporting

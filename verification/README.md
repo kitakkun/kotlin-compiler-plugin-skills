@@ -1,6 +1,6 @@
 # Verification
 
-Each subdirectory is an **independent Gradle project** that verifies a row of the "How to choose" table in `skills/fir-extensions-overview/SKILL.md`. Every verification has:
+Each subdirectory is an **independent Gradle project** that verifies a row of the "How to choose" table in `skills/kotlin-compiler-plugin/references/fir-extensions-overview/guide.md`. Every verification has:
 
 - `SPEC.md` — the goal and PASS criterion for this verification
 - `plugin/` — the compiler plugin implementing the relevant FIR extension
@@ -21,7 +21,7 @@ scripts/run-verification.sh 04-status-transformer
 # Sandbox created at: /tmp/kotlin-skill-verify-04-status-transformer-<timestamp>
 ```
 
-The sandbox contains only `SPEC.md` — the agent has no spatial access to the saved implementation, other verifications, the bootstrap example under `skills/compiler-plugin-bootstrap/example/`, or `evaluation/` answer keys.
+The sandbox contains only `SPEC.md` — the agent has no spatial access to the saved implementation, other verifications, the bootstrap example under `skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/example/`, or `evaluation/` answer keys.
 
 PASS criterion differs per verification:
 - **Diagnostic-style** (e.g. checkers): the sample compilation must FAIL with the expected diagnostic

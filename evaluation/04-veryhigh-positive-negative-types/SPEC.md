@@ -62,7 +62,7 @@ The diagnostic does *not* fire when:
 ```
 evaluation/04-veryhigh-positive-negative-types/work/
 ├── settings.gradle.kts, gradle.properties, build.gradle.kts
-├── gradle/, gradlew                ← copy from skills/compiler-plugin-bootstrap/example/
+├── gradle/, gradlew                ← copy from skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/example/
 ├── plugin/
 │   └── src/main/kotlin/com/example/signs/
 │       ├── SignsPluginNames.kt
@@ -185,7 +185,7 @@ grep -E 'override (fun|val)' plugin/src/main/kotlin/com/example/signs/fir/ConeNu
 - **`/Users/kitakkun/Documents/GitHub/kotlin-lang/plugins/plugin-sandbox/src/.../FirNumberSignAttributeExtension.kt`** and its companions (`ConeNumberSignAttribute.kt`, `SignedNumberCallChecker.kt`) — these are the exact reference impl that this evaluation is designed to exercise. The agent must produce equivalent code from the SKILL.md and EVIDENCE.md alone, not by transliterating.
 - All `verification/` subdirectories — they contain working reference implementations; off-limits per evaluation policy even though most are not directly applicable here.
 
-`skills/compiler-plugin-bootstrap/example/` is allowed for the project structure boilerplate (Gradle wrapper, settings, registrar shape).
+`skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/example/` is allowed for the project structure boilerplate (Gradle wrapper, settings, registrar shape).
 
 ## Common failure modes (anti-cheat)
 
@@ -212,4 +212,4 @@ This task carries **4× the weight** of the small task in overall scoring, refle
 
 ## Pre-existing reference
 
-The forbidden references above are the canonical implementation. `skills/compiler-plugin-bootstrap/example/` provides the project boilerplate; the agent may freely copy `gradle/`, `gradlew`, `settings.gradle.kts`, and the registrar pattern from there.
+The forbidden references above are the canonical implementation. `skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/example/` provides the project boilerplate; the agent may freely copy `gradle/`, `gradlew`, `settings.gradle.kts`, and the registrar pattern from there.

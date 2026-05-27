@@ -40,7 +40,7 @@ Constraints:
 ```
 evaluation/02-medium-auto-stringify/work/
 ├── settings.gradle.kts, gradle.properties, build.gradle.kts
-├── gradle/, gradlew      ← copy from skills/compiler-plugin-bootstrap/example/
+├── gradle/, gradlew      ← copy from skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/example/
 ├── plugin/
 └── sample/
     └── src/main/kotlin/com/example/app/Main.kt
