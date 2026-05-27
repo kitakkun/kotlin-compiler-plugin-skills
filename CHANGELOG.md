@@ -6,9 +6,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-27
+
 ### Changed
 
 - **Skill structure** (breaking for `~/.claude/plugins/cache` consumers): consolidate the previous 24 per-topic skills into a **single skill** named `kotlin-compiler-plugin`. The skill's `SKILL.md` is now a router; per-topic content lives at `skills/kotlin-compiler-plugin/references/<topic>/guide.md` (renamed from `SKILL.md`) and is read on demand. Per-topic `EVIDENCE.md` and `CHANGES.md` move alongside their `guide.md`. Cross-references inside guides become relative Markdown links (`[`<topic>`](../<topic>/guide.md)`). No reference-guide content changes beyond link form and stale `SKILL.md` → `guide.md` filename references. Top-level docs (README, NOTICE, CONTRIBUTING, evaluation/verification SPECs, sandbox runners) updated to the new paths.
+
+### Validated against
+
+- Kotlin 2.3.21
+- Gradle 9.5.0
+- JDK 21
+
+All six accuracy benchmarks in `evaluation/` were re-run against the consolidated layout by fresh sub-agents and matched or exceeded the 0.1.1 baselines (`evaluation/<task>/RESULT.md` files updated in the same release). No accuracy regression.
 
 ## [0.1.1] - 2026-05-26
 
