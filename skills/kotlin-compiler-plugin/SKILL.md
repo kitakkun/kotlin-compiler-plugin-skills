@@ -14,6 +14,32 @@ This skill bundles the how-to for every supported topic into one directory of re
 3. If the topic has `EVIDENCE.md` (primary-source citations) or `CHANGES.md` (Kotlin-version migration notes) and you need them, Read those too. They are only present when there is something worth recording.
 4. Some guides themselves point to other guides via `../<other-topic>/guide.md`. Follow them when the current task spans multiple topics.
 
+## How to plan parallel work
+
+For non-trivial plugin work (more than a single-file change), use a **spec-first, fan-out** workflow. Compiler plugins decompose cleanly into FIR / IR / Gradle / sample parts that are largely independent once the shared scaffolding is fixed — so wall-clock time drops a lot if you parallelise.
+
+1. **Freeze the spec first.** Before writing code, write a short `intent.md` (or reuse the task's `SPEC.md`) capturing: feature name, user-visible API shape, what FIR does, what IR does, the sample code that exercises it, and the verification commands. One page is enough. Without this, parallel agents will redesign the API mid-flight and collide.
+
+2. **Settle the shared bottlenecks sequentially.** These touch files every parallel branch will read, so do them in one place first:
+   - `settings.gradle.kts` (every module added must be enumerated here)
+   - `plugin/build.gradle.kts` `dependencies { }` block
+   - `plugin/src/main/resources/META-INF/services/org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar` and `…CommandLineProcessor`
+   - The registrar's `registerExtensions(...)` body that wires every FIR/IR extension
+   - The shared `PluginNames` / `PluginKey` constants
+
+3. **Fan out the rest in parallel.** Once the bottlenecks are frozen, these branches are usually safe to run as concurrent sub-agents (use the `Agent` tool with `run_in_background: true`):
+   - FIR extension body — checker logic, declaration generator, supertype generator, etc. (each FIR extension class is independent)
+   - IR extension body — call rewriter, body modifier, synthetic class generator (IR is independent of FIR *unless* it fills FIR-generated stub names — in that case the FIR stub names must be in the spec)
+   - `sample/` source — exercises the public API contract; depends only on the contract, not on internals
+   - Test data / box-test fixtures
+   - Reference-guide / README updates
+
+   Brief each agent on exactly which subdir / file / class it owns. **Two agents must never touch the same file.** If you find yourself wanting two agents to edit the same Gradle script or registrar, that work belongs in step 2, not step 3.
+
+4. **Integrate sequentially.** Once all sub-agents return, you (the parent) run the verification commands from step 1. Don't trust agent self-reports — actually build the plugin and the sample, compile box tests, grep the output. If a build collides on a file two agents touched, the decomposition was wrong; redo step 2 with that file pulled into the sequential phase.
+
+When the change is small (one file, one fix, one new diagnostic on an existing checker), skip this whole flow — the planning overhead exceeds the speedup.
+
 ## Topic index
 
 ### Foundation

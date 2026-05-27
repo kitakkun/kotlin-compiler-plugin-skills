@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-05-27
+
+### Added
+
+- `SKILL.md` gains a **"How to plan parallel work"** section that prescribes a spec-first, fan-out workflow for non-trivial plugin work. Names the shared bottlenecks (`settings.gradle.kts`, `plugin/build.gradle.kts` deps, `META-INF/services/*`, the registrar's `registerExtensions(...)` body, shared `PluginNames`) that must be settled sequentially before fanning out FIR / IR / sample / testData branches as concurrent sub-agents.
+
 ## [0.2.0] - 2026-05-27
 
 ### Changed
