@@ -17,7 +17,7 @@ Concrete recent breaks:
 - **Kotlin 2.3.20** renamed `FirSimpleFunction` → `FirNamedFunction` (and `FirSimpleFunctionBuilder` → `FirNamedFunctionBuilder`). Source-level rename, runtime linkage failure for plugins built against the old name.
 - **Kotlin 2.3.0** added a `containingFileName` parameter to `FirExtension.createTopLevelFunction`; older callers need a compat shim.
 - **Kotlin 2.2** ([KT-68003](https://youtrack.jetbrains.com/issue/KT-68003)) collapsed `IrMemberAccessExpression`'s `dispatchReceiver`/`extensionReceiver`/`valueArguments` into a single flat `arguments: ValueArgumentsList`. Plugins that produce or transform `IrCall` need divergent code per Kotlin minor.
-- **Kotlin 2.4** moved several `FirExtensionRegistrar` / `IrGenerationExtension` registration APIs and introduced `IrAnnotation` for `IrConstructorCall`.
+- **Kotlin 2.4** completed the KT-68003 migration by **removing** the deprecated IR accessors `IrMemberAccessExpression.extensionReceiver` / `valueArgumentsCount` / `getValueArgument` / `putValueArgument` and `IrFunction.valueParameters` / `extensionReceiverParameter` (only `dispatchReceiver` survives; `IrFunction.dispatchReceiverParameter` became read-only `val`). It also reworked `FirReplSnippetResolveExtension` into a `FirExtensionSessionComponent` (so it left `FirExtensionRegistrar.AVAILABLE_EXTENSIONS`, which dropped 18 → 17 entries), and `IrGeneratedDeclarationsRegistrar` now takes `List<IrAnnotation>` rather than `IrConstructorCall` annotations.
 
 If consumers use your plugin across Kotlin versions you must pick a strategy. The table below sketches the choice; the rest of the skill explains each option.
 
@@ -40,11 +40,11 @@ The default. `plugin/build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.3.21")
+    compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.4.0")
 }
 ```
 
-Document in your README: "Requires Kotlin 2.3.x". Bump as needed.
+Document in your README: "Requires Kotlin 2.4.x". Bump as needed.
 
 Pros: simple, fast to maintain. Cons: consumers on older Kotlin can't use you; you ship a release per Kotlin minor.
 
@@ -376,13 +376,13 @@ The canonical workaround is to fall back to the **legacy `buildscript {}` block 
 buildscript {
     repositories { mavenCentral() }
     dependencies {
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.21")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.0")
     }
 }
 apply(plugin = "org.jetbrains.kotlin.jvm")
 
 dependencies {
-    compileOnly("org.jetbrains.kotlin:kotlin-compiler:2.3.21")
+    compileOnly("org.jetbrains.kotlin:kotlin-compiler:2.4.0")
 }
 ```
 
@@ -408,7 +408,7 @@ Run your build matrix against every Kotlin version you claim to support. Both Me
 # .github/workflows/ci.yml
 strategy:
   matrix:
-    kotlin: [2.1.21, 2.2.20, 2.2.21, 2.3.0, 2.3.20, 2.3.21]
+    kotlin: [2.1.21, 2.2.20, 2.2.21, 2.3.0, 2.3.20, 2.3.21, 2.4.0]
 steps:
   - run: ./gradlew test -Pkotlin.compiler=${{ matrix.kotlin }}
 ```
@@ -416,7 +416,7 @@ steps:
 In Gradle:
 
 ```kotlin
-val kotlinVersion = providers.gradleProperty("kotlin.compiler").orElse("2.3.21")
+val kotlinVersion = providers.gradleProperty("kotlin.compiler").orElse("2.4.0")
 dependencies {
     compileOnly("org.jetbrains.kotlin:kotlin-compiler:${kotlinVersion.get()}")
 }
@@ -436,7 +436,7 @@ Cap the matrix:
 
 ### Per-subproject `kotlin-compiler` mismatch with consumer's compiler
 
-Your plugin's `compileOnly("...kotlin-compiler:2.3.21")` doesn't pin the consumer's Kotlin version. The consumer can be on 2.2 or 2.4. If APIs you reference don't exist in their version, you get `NoSuchMethodError` at their compile time. Either use only APIs stable across the supported range, ship per-version artifacts, or ship a compat shim (Strategy 4).
+Your plugin's `compileOnly("...kotlin-compiler:2.4.0")` doesn't pin the consumer's Kotlin version. The consumer can be on 2.2 or 2.4. If APIs you reference don't exist in their version, you get `NoSuchMethodError` at their compile time. Either use only APIs stable across the supported range, ship per-version artifacts, or ship a compat shim (Strategy 4).
 
 ### `KotlinCompilerVersion.VERSION` returns `@snapshot@`
 

@@ -100,7 +100,7 @@ Listed in approximate frequency of real-world use (counted across `kotlin/plugin
 | `Fir2IrReplSnippetConfiguratorExtension` | REPL snippet bridge to IR | [`fir-repl-snippet-extensions`](../fir-repl-snippet-extensions/guide.md) |
 | `FirMetadataSerializerPlugin` | Influence what gets written to `.kotlin_metadata` (`@FirExtensionApiInternals`, **scheduled for removal — KT-64695**; see note below) | (do not use) |
 
-The authoritative list lives at `FirExtensionRegistrar.AVAILABLE_EXTENSIONS` (line 23 of `compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt` at v2.3.21); **18 entries total** (the `FirReplSnippetResolveExtension::class` entry was added in the 2.1 cycle — not present at v2.0.21, present at v2.1.20). Extensions not in that list cannot be registered through the registrar DSL.
+The authoritative list lives at `FirExtensionRegistrar.AVAILABLE_EXTENSIONS` (line 23 of `compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt` at v2.4.0); **17 entries total**. (`FirReplSnippetResolveExtension::class` was entry 15 through 2.3.x but was dropped from the list in 2.4.0 — see CHANGES.md.) Extensions not in that list cannot be registered through the registrar DSL.
 
 ### Note on `FirMetadataSerializerPlugin`
 

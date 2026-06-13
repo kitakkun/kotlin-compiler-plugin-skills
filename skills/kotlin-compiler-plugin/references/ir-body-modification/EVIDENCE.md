@@ -6,14 +6,14 @@ Citations are against the Kotlin compiler source tree at `/Users/kitakkun/Docume
 
 ### Claim: `IrBlockBody` exposes `statements: MutableList<IrStatement>` via `IrStatementContainer`
 
-**File**: [`kotlin/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/expressions/IrBlockBody.kt:18`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/expressions/IrBlockBody.kt#L18)
+**File**: [`kotlin/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/expressions/IrBlockBody.kt:18`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/expressions/IrBlockBody.kt#L18)
 
 **Snippet**:
 ```kotlin
 abstract class IrBlockBody : IrBody(), IrStatementContainer {
 ```
 
-**File**: [`kotlin/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/expressions/IrStatementContainer.kt:17-19`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/expressions/IrStatementContainer.kt#L17-L19)
+**File**: [`kotlin/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/expressions/IrStatementContainer.kt:17-19`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/expressions/IrStatementContainer.kt#L17-L19)
 
 **Snippet**:
 ```kotlin
@@ -24,7 +24,7 @@ interface IrStatementContainer : IrElement {
 
 ### Claim: `IrExpressionBody` is a sibling body type carrying a single `expression`
 
-**File**: [`kotlin/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/expressions/IrExpressionBody.kt:17-18`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/expressions/IrExpressionBody.kt#L17-L18)
+**File**: [`kotlin/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/expressions/IrExpressionBody.kt:17-18`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/expressions/IrExpressionBody.kt#L17-L18)
 
 **Snippet**:
 ```kotlin
@@ -34,7 +34,7 @@ abstract class IrExpressionBody : IrBody() {
 
 ### Claim: `IrSyntheticBody` is the body type used for compiler-synthesised members (e.g. data class `equals`)
 
-**File**: [`kotlin/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/expressions/IrSyntheticBody.kt:16-17`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/expressions/IrSyntheticBody.kt#L16-L17)
+**File**: [`kotlin/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/expressions/IrSyntheticBody.kt:16-17`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/expressions/IrSyntheticBody.kt#L16-L17)
 
 **Snippet**:
 ```kotlin
@@ -44,7 +44,7 @@ abstract class IrSyntheticBody : IrBody() {
 
 ### Claim: All three are sealed under `IrBody`
 
-**File**: [`kotlin/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/expressions/IrBody.kt:18`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/expressions/IrBody.kt#L18)
+**File**: [`kotlin/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/expressions/IrBody.kt:18`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/expressions/IrBody.kt#L18)
 
 **Snippet**:
 ```kotlin
@@ -55,7 +55,7 @@ sealed class IrBody : IrElementBase(), IrElement {
 
 ### Claim: `irBlockBody { ... }` exists as a builder DSL entry point
 
-**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt:448-457`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt#L448-L457)
+**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt:448-457`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt#L448-L457)
 
 **Snippet**:
 ```kotlin
@@ -68,7 +68,7 @@ inline fun IrBuilderWithScope.irBlockBody(
 
 ### Claim: `irBlock(resultType = ...)` accepts an explicit result type for the synthesised container expression
 
-**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt:409-421`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt#L409-L421)
+**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt:409-421`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt#L409-L421)
 
 **Snippet**:
 ```kotlin
@@ -83,7 +83,7 @@ inline fun IrBuilderWithScope.irBlock(
 
 ### Claim: `irTry(type, tryResult, catches, finallyExpression)` is the exact signature
 
-**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt:406-407`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt#L406-L407)
+**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt:406-407`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt#L406-L407)
 
 **Snippet**:
 ```kotlin
@@ -93,7 +93,7 @@ fun IrBuilder.irTry(type: IrType, tryResult: IrExpression, catches: List<IrCatch
 
 ### Claim: `irReturn(value)` is on `IrBuilderWithScope`
 
-**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt:71-78`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt#L71-L78)
+**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt:71-78`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt#L71-L78)
 
 **Snippet**:
 ```kotlin
@@ -109,7 +109,7 @@ fun IrBuilderWithScope.irReturn(value: IrExpression) =
 
 ### Claim: `irExprBody(value)` constructs an `IrExpressionBody` via the irFactory
 
-**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt:65-66`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt#L65-L66)
+**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt:65-66`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt#L65-L66)
 
 **Snippet**:
 ```kotlin
@@ -119,7 +119,7 @@ fun IrBuilder.irExprBody(value: IrExpression) =
 
 ### Claim: `irGetField(receiver, field)` — receiver first, then field (NOT `irGet(field, receiver)`)
 
-**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt:149-150`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt#L149-L150)
+**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt:149-150`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt#L149-L150)
 
 **Snippet**:
 ```kotlin
@@ -129,7 +129,7 @@ fun IrBuilder.irGetField(receiver: IrExpression?, field: IrField, type: IrType =
 
 ### Claim: `irTemporary` parameter is named `nameHint` (not `name`)
 
-**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt:47-53`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt#L47-L53)
+**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt:47-53`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt#L47-L53)
 
 **Snippet**:
 ```kotlin
@@ -146,7 +146,7 @@ fun <T : IrElement> IrStatementsBuilder<T>.irTemporary(
 
 ### Claim: `IrFunction.parameters: List<IrValueParameter>` is the unified accessor
 
-**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/declarations/IrFunction.kt:45-47`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/declarations/IrFunction.kt#L45-L47)
+**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/declarations/IrFunction.kt:45-47`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/declarations/IrFunction.kt#L45-L47)
 
 **Snippet**:
 ```kotlin
@@ -159,7 +159,7 @@ The KDoc immediately above (lines 41-44) states the parameter ordering is `[disp
 
 ### Claim: `IrParameterKind` enum has exactly `DispatchReceiver`, `Context`, `ExtensionReceiver`, `Regular`
 
-**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/declarations/IrParameterKind.kt:8-13`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/declarations/IrParameterKind.kt#L8-L13)
+**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/declarations/IrParameterKind.kt:8-13`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/declarations/IrParameterKind.kt#L8-L13)
 
 **Snippet**:
 ```kotlin
@@ -175,7 +175,7 @@ enum class IrParameterKind {
 
 ### Claim: Public constructor takes a `GeneratedDeclarationKey`
 
-**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/declarations/IrDeclarationOrigin.kt:131-132`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/declarations/IrDeclarationOrigin.kt#L131-L132)
+**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/declarations/IrDeclarationOrigin.kt:131-132`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/declarations/IrDeclarationOrigin.kt#L131-L132)
 
 **Snippet**:
 ```kotlin
@@ -189,7 +189,7 @@ The primary constructor is private; callers use the secondary `constructor(plugi
 
 ### Claim: `IrElementTransformerVoidWithContext.visitFunctionNew` exists at line 129
 
-**File**: [`kotlin/compiler/ir/backend.common/src/org/jetbrains/kotlin/backend/common/IrElementTransformerVoidWithContext.kt:129-131`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/ir/backend.common/src/org/jetbrains/kotlin/backend/common/IrElementTransformerVoidWithContext.kt#L129-L131)
+**File**: [`kotlin/compiler/ir/backend.common/src/org/jetbrains/kotlin/backend/common/IrElementTransformerVoidWithContext.kt:129-131`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/ir/backend.common/src/org/jetbrains/kotlin/backend/common/IrElementTransformerVoidWithContext.kt#L129-L131)
 
 **Snippet**:
 ```kotlin
@@ -200,7 +200,7 @@ open fun visitFunctionNew(declaration: IrFunction): IrStatement {
 
 ### Claim: Plain `IrElementTransformerVoid` has only `visitFunction` (no `visitFunctionNew`)
 
-**File**: [`kotlin/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/visitors/IrElementTransformerVoid.kt:71-78`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/visitors/IrElementTransformerVoid.kt#L71-L78)
+**File**: [`kotlin/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/visitors/IrElementTransformerVoid.kt:71-78`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/visitors/IrElementTransformerVoid.kt#L71-L78)
 
 **Snippet**:
 ```kotlin
@@ -216,7 +216,7 @@ A grep for `visitFunctionNew` in this file returns no hits — the `New`-suffixe
 
 ### Claim: `arguments[i]` is the canonical slot accessor; `dispatchReceiver` is a convenience that delegates to `arguments[0]`
 
-**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/expressions/IrMemberAccessExpression.kt:222-237`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/expressions/IrMemberAccessExpression.kt#L222-L237)
+**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/expressions/IrMemberAccessExpression.kt:222-237`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/expressions/IrMemberAccessExpression.kt#L222-L237)
 
 **Snippet**:
 ```kotlin

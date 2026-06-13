@@ -1,6 +1,10 @@
 # Changes affecting this skill
 
-API migrations relevant to writing `FirFunctionTypeKindExtension`. This skill targets the **current stable Kotlin** (2.3.x).
+API migrations relevant to writing `FirFunctionTypeKindExtension`. This skill targets the **current stable Kotlin** (2.4.0).
+
+## Kotlin 2.3 → 2.4: legacy IR argument/parameter accessors removed
+
+If your function-type-kind plugin manipulates IR for the synthesised function types, note that the legacy `IrMemberAccessExpression.extensionReceiver` / `valueArgumentsCount` / `getValueArgument` and `IrFunction.valueParameters` accessors — error-level `@DeprecatedForRemovalCompilerApi` through 2.3.x — were **removed in 2.4.0**. Only `dispatchReceiver` survives. Use the unified `arguments` list and `parameters` (with `IrParameterKind`). See [`ir-call-rewriting/CHANGES.md`](../ir-call-rewriting/CHANGES.md) and [`ir-body-modification/CHANGES.md`](../ir-body-modification/CHANGES.md) for the full list.
 
 ## Kotlin 2.1.10 → 2.1.20
 

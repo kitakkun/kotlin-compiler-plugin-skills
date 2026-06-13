@@ -275,12 +275,12 @@ This is the comparison the compiler itself uses (e.g. `compiler/ir/backend.commo
 
 For functions with an expression body that's been "block-ified" by an earlier phase, the last statement is often a `return`. Adding a statement after that return makes it dead code (and IR validation will warn). Insert *before* the last statement, or use `irBlock` to wrap.
 
-### `processed.parameters` is the canonical accessor in 2.3.x
+### `processed.parameters` is the canonical accessor in 2.4.0
 
-`IrFunction.parameters: List<IrValueParameter>` is the unified mutable list and the preferred accessor in Kotlin 2.3.x. At v2.3.21:
+`IrFunction.parameters: List<IrValueParameter>` is the unified mutable list and the preferred accessor in Kotlin 2.4.0. At v2.4.0:
 
-- `valueParameters` and `extensionReceiverParameter` have been **removed** from `IrFunction` — they no longer exist as members. Old code referencing them won't compile against this Kotlin version.
-- `dispatchReceiverParameter` survives as a non-deprecated read-only convenience getter on `IrFunction` (`IrFunction.kt:62`, just `parameters.firstOrNull { it.kind == IrParameterKind.DispatchReceiver }`). It's safe to call.
+- `valueParameters` and `extensionReceiverParameter` have been **removed** from `IrFunction` — they no longer exist as members. (Both were error-level `@DeprecatedForRemovalCompilerApi` through 2.3.x.) Old code referencing them won't compile against this Kotlin version.
+- `dispatchReceiverParameter` survives but is now **read-only** (`val`, not `var` as in 2.3.x) — a non-deprecated convenience getter on `IrFunction` (`IrFunction.kt:62`, just `parameters.firstOrNull { it.kind == IrParameterKind.DispatchReceiver }`). Reading it is safe; code that *assigned* `dispatchReceiverParameter = …` must now mutate `parameters` instead.
 - Several **extension** helpers in `org.jetbrains.kotlin.ir.util.IrUtils.kt` (`explicitParameters`, `explicitParametersCount`, `addExplicitParametersTo`, `allParametersCount`, `createParameterDeclarations`) carry `@DeprecatedForRemovalCompilerApi(_2_1_20)` — replace with `parameters` directly.
 
 New code should filter `parameters` by `kind` (`IrParameterKind.DispatchReceiver`, `Context`, `ExtensionReceiver`, `Regular`) when you need a specific subset; for `this` specifically, `dispatchReceiverParameter` remains the convenient form.

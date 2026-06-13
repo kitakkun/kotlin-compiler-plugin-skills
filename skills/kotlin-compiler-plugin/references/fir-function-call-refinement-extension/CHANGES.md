@@ -1,6 +1,6 @@
 # Changes affecting this skill
 
-API migrations relevant to writing `FirFunctionCallRefinementExtension`. This skill targets the **current stable Kotlin** (2.3.x).
+API migrations relevant to writing `FirFunctionCallRefinementExtension`. This skill targets the **current stable Kotlin** (2.4.0).
 
 The extension is gated by `@FirExtensionApiInternals` and the source explicitly warns it is "highly unstable and not recommended to use" — expect API breakage at almost every Kotlin minor. The notes below are the breaks that actually shipped.
 

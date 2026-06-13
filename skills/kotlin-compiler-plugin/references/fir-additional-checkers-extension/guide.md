@@ -7,7 +7,7 @@ description: Add custom Kotlin diagnostics (errors and warnings shown in the IDE
 
 This is the K2 extension point that gates **diagnostics** — the warnings and errors the compiler reports against user source. Anything you'd want to be a `w:` or `e:` line in `kotlinc` output, or a red/yellow squiggle in the IDE, is implemented here.
 
-Source: [`kotlin/compiler/fir/checkers/src/org/jetbrains/kotlin/fir/analysis/extensions/FirAdditionalCheckersExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/fir/checkers/src/org/jetbrains/kotlin/fir/analysis/extensions/FirAdditionalCheckersExtension.kt).
+Source: [`kotlin/compiler/fir/checkers/src/org/jetbrains/kotlin/fir/analysis/extensions/FirAdditionalCheckersExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/fir/checkers/src/org/jetbrains/kotlin/fir/analysis/extensions/FirAdditionalCheckersExtension.kt).
 
 ## What you get
 

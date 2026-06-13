@@ -9,7 +9,7 @@ The K2 extension point that adds **supertypes** (interfaces or base classes) to 
 
 (Note: Parcelize is *not* a user of this extension — `@Parcelize class` requires the user to still write `: Parcelable` by hand. The plugin only generates members and runs checkers.)
 
-Source: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt).
+Source: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt).
 
 ## API surface
 
@@ -115,7 +115,7 @@ class MyFirRegistrar : FirExtensionRegistrar() {
 
 ## Resolving annotation-argument types via TypeResolveService
 
-The `typeResolver: TypeResolveService` parameter is for the case where the supertype to add is *named in an annotation argument*: e.g. `@AddSuper(SomeInterface::class) class Foo` should make `Foo` extend `SomeInterface`. The KClass argument arrives as a `FirGetClassCall`; the canonical helper for converting it into a resolved type is `typeFromQualifierParts` (in [`compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/RawUserTypeBuilder.kt`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/RawUserTypeBuilder.kt)). kotlinx-serialization uses it in [`SerializationFirSupertypesExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.3.21/plugins/kotlinx-serialization/kotlinx-serialization.k2/src/org/jetbrains/kotlinx/serialization/compiler/fir/SerializationFirSupertypesExtension.kt):
+The `typeResolver: TypeResolveService` parameter is for the case where the supertype to add is *named in an annotation argument*: e.g. `@AddSuper(SomeInterface::class) class Foo` should make `Foo` extend `SomeInterface`. The KClass argument arrives as a `FirGetClassCall`; the canonical helper for converting it into a resolved type is `typeFromQualifierParts` (in [`compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/RawUserTypeBuilder.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/RawUserTypeBuilder.kt)). kotlinx-serialization uses it in [`SerializationFirSupertypesExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.0/plugins/kotlinx-serialization/kotlinx-serialization.k2/src/org/jetbrains/kotlinx/serialization/compiler/fir/SerializationFirSupertypesExtension.kt):
 
 ```kotlin
 override fun computeAdditionalSupertypes(

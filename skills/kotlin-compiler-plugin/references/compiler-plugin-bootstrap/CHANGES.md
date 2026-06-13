@@ -1,6 +1,12 @@
 # Changes affecting this skill
 
-API migrations relevant to bootstrapping a Kotlin compiler plugin. This skill targets the **current stable Kotlin** (2.3.x). If you're upgrading your plugin from an older Kotlin compiler, the entries below cover what changed.
+API migrations relevant to bootstrapping a Kotlin compiler plugin. This skill targets the **current stable Kotlin** (2.4.0). If you're upgrading your plugin from an older Kotlin compiler, the entries below cover what changed.
+
+## Kotlin 2.3 → 2.4
+
+- **No public `CompilerPluginRegistrar` API change.** `pluginId` / `supportsK2` / `ExtensionStorage.registerExtensions` are unchanged; only line numbers in the source shifted.
+- **Compiler source-tree moves (navigation only — not API):** the `compiler/cli/cli-common/` module was renamed to `compiler/cli/cli-base/` (so `CommonCompilerArguments.kt`, `Properties.kt`, `PluginsOptionsParser.kt` moved), and `core/compiler.common/.../name/SpecialNames.kt` moved to `core/names/.../name/SpecialNames.kt`. EVIDENCE.md links were re-pinned accordingly.
+- **JDK 25 / BTAPI workaround still required.** The bundled IntelliJ `JavaVersion` that can't parse `"25.0.2"` is unchanged in 2.4.0 (`versions.intellijSdk=251.27812.49`, identical to 2.3.21), so keep the `org.gradle.java.home` → JDK 21 pin shown in guide.md.
 
 ## Kotlin 2.2 → 2.3
 

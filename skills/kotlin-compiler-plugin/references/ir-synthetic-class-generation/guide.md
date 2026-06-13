@@ -158,8 +158,11 @@ newClass.constructors.forEach { ctor ->
     registrar.registerConstructorAsMetadataVisible(ctor)
 }
 
-// To attach annotations onto a generated declaration:
-registrar.addMetadataVisibleAnnotationsToElement(declaration, listOfAnnotations)
+// To attach annotations onto a generated declaration.
+// Kotlin 2.4.0: the list element type is IrAnnotation, not IrConstructorCall.
+// Build each with DeclarationIrBuilder.irAnnotation(ctorSymbol, typeArguments)
+// (irCallConstructor(...) still returns a plain IrConstructorCall — wrong type here).
+registrar.addMetadataVisibleAnnotationsToElement(declaration, listOfAnnotations) // List<IrAnnotation>
 ```
 
 Available `IrGeneratedDeclarationsRegistrar` methods:
@@ -168,8 +171,8 @@ Available `IrGeneratedDeclarationsRegistrar` methods:
 |---|---|
 | `registerFunctionAsMetadataVisible(IrSimpleFunction)` | Make a generated function visible to consumers' metadata |
 | `registerConstructorAsMetadataVisible(IrConstructor)` | Same, for constructors |
-| `addMetadataVisibleAnnotationsToElement(IrDeclaration, List<IrConstructorCall>)` | Attach annotations (built as `IrConstructorCall`s) to be saved into metadata |
-| `getMetadataVisibleAnnotationsForElement(IrDeclaration): MutableList<IrConstructorCall>` | Read back the metadata-visible annotations that were attached |
+| `addMetadataVisibleAnnotationsToElement(IrDeclaration, List<IrAnnotation>)` | Attach annotations to be saved into metadata. **Kotlin 2.4.0: element type is `IrAnnotation`** (was `IrConstructorCall` through 2.3.x); build with `DeclarationIrBuilder.irAnnotation(...)` |
+| `getMetadataVisibleAnnotationsForElement(IrDeclaration): MutableList<IrAnnotation>` | Read back the metadata-visible annotations that were attached (`IrAnnotation` since 2.4.0) |
 | `addCustomMetadataExtension(declaration, id, data)` | Attach raw bytes under a custom extension id (consumed by your own paired FIR-resolver / IR-extension on the read side) |
 | `getCustomMetadataExtension(declaration, id): ByteArray?` | Read back the bytes attached via `addCustomMetadataExtension` |
 

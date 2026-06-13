@@ -1,6 +1,15 @@
 # Changes affecting this skill
 
-API migrations relevant to generating synthetic IR classes. This skill targets the **current stable Kotlin** (2.3.x).
+API migrations relevant to generating synthetic IR classes. This skill targets the **current stable Kotlin** (2.4.0).
+
+## Kotlin 2.3 → 2.4: metadata-annotation API uses `IrAnnotation`
+
+`IrGeneratedDeclarationsRegistrar` (reached via `pluginContext.metadataDeclarationRegistrar`) switched its annotation element type from `IrConstructorCall` to the new `IrAnnotation` (which is `IrConstructorCall`'s subclass — `IrAnnotation : IrConstructorCall()`):
+
+- `addMetadataVisibleAnnotationsToElement(declaration, annotations: List<IrAnnotation>)` (and its `vararg` overload) — was `List<IrConstructorCall>`.
+- `getMetadataVisibleAnnotationsForElement(declaration): MutableList<IrAnnotation>` — was `MutableList<IrConstructorCall>`.
+
+Build the annotations with `DeclarationIrBuilder.irAnnotation(ctorSymbol, typeArguments)` (returns `IrAnnotation`) rather than `irCallConstructor(...)` (returns a plain `IrConstructorCall`, which no longer type-checks here). `registerFunctionAsMetadataVisible` / `registerConstructorAsMetadataVisible` are unchanged.
 
 ## Kotlin 2.0 → 2.1.20
 

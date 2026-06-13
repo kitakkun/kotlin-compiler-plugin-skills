@@ -7,7 +7,7 @@ description: Modify modifiers (visibility, modality, isOpen, isFinal, isInline, 
 
 The K2 extension point that **rewrites the `FirDeclarationStatus`** (the bag of modifier flags) on existing user declarations. Canonical use: `@AllOpen` makes every member of an annotated class `open`; an `@External` annotation could change visibility; `@Inline` could force inlining.
 
-Source: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirStatusTransformerExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirStatusTransformerExtension.kt).
+Source: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirStatusTransformerExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirStatusTransformerExtension.kt).
 
 ## API surface
 
@@ -48,7 +48,7 @@ You can change visibility on functions, properties, constructors, accessors, fie
 
 ## End-to-end example: make annotated classes' members `open`
 
-A custom `@Open` annotation (`com.example.Open`) that compiles `@Open class Foo { fun bar() }` as `open class Foo { open fun bar() }`. This mirrors what the official allopen plugin does internally — allopen takes a configurable list of annotation FQNs via plugin options rather than hard-coding one. See [`plugins/allopen/allopen.k2/src/org/jetbrains/kotlin/allopen/fir/FirAllOpenStatusTransformer.kt`](https://github.com/JetBrains/kotlin/blob/v2.3.21/plugins/allopen/allopen.k2/src/org/jetbrains/kotlin/allopen/fir/FirAllOpenStatusTransformer.kt) for the production implementation.
+A custom `@Open` annotation (`com.example.Open`) that compiles `@Open class Foo { fun bar() }` as `open class Foo { open fun bar() }`. This mirrors what the official allopen plugin does internally — allopen takes a configurable list of annotation FQNs via plugin options rather than hard-coding one. See [`plugins/allopen/allopen.k2/src/org/jetbrains/kotlin/allopen/fir/FirAllOpenStatusTransformer.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.0/plugins/allopen/allopen.k2/src/org/jetbrains/kotlin/allopen/fir/FirAllOpenStatusTransformer.kt) for the production implementation.
 
 ### 1. Predicate
 

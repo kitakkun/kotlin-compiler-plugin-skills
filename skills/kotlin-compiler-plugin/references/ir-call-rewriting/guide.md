@@ -19,9 +19,9 @@ The canonical IR transformation: walk the module's IR, find every `IrCall` to a 
 | `typeArguments: MutableList<IrType?>` | `IrMemberAccessExpression` | type arguments (mutable list, slot-by-slot) |
 | `origin: IrStatementOrigin?` | `IrMemberAccessExpression` | why the call exists (operator, getter, etc.) |
 | `dispatchReceiver: IrExpression?` | `IrMemberAccessExpression` | convenience getter/setter that reads/writes the `arguments` slot for the dispatch receiver. Marked `@UnsafeDuringIrConstructionAPI`; KDoc on the source soft-discourages it ("try to use `arguments` instead, unless usage of `dispatchReceiver` makes for a cleaner/simpler code"). |
-| `extensionReceiver: IrExpression?` | `IrMemberAccessExpression` | convenience getter/setter for the extension-receiver slot. Marked `@DeprecatedForRemovalCompilerApi(_2_1_20)` at v2.3.21 — it still compiles (with opt-in) but is slated for removal. |
+| ~~`extensionReceiver: IrExpression?`~~ | `IrMemberAccessExpression` | **Removed in Kotlin 2.4.0** (was `@DeprecatedForRemovalCompilerApi(_2_1_20)` through 2.3.x). Index `arguments` at the `IrParameterKind.ExtensionReceiver` slot instead — see below. |
 
-The legacy `dispatchReceiver` / `extensionReceiver` accessors **both still exist** at v2.3.21. They read and write the corresponding slots of `arguments` under the hood. `extensionReceiver` is more strongly deprecated than `dispatchReceiver` (the former is `@DeprecatedForRemovalCompilerApi`, the latter is `@UnsafeDuringIrConstructionAPI`); in new code, prefer indexing `arguments` by `function.parameters[i].kind == IrParameterKind.ExtensionReceiver`.
+The two accessors diverged at Kotlin 2.4.0: `extensionReceiver` was **removed** (it was `@DeprecatedForRemovalCompilerApi(_2_1_20)` through 2.3.x), while `dispatchReceiver` **survives** as an `@UnsafeDuringIrConstructionAPI` convenience getter/setter over `arguments[0]` (upstream KDoc soft-discourages it: "try to use `arguments` instead, unless usage of `dispatchReceiver` makes for a cleaner/simpler code"). For the extension receiver there is no longer any shortcut — index `arguments` by `function.parameters[i].kind == IrParameterKind.ExtensionReceiver`.
 
 **This is the critical change since Kotlin 2.2 (KT-68003)**: the dispatch and extension receivers are *not* separate slots — they live inside `arguments` at well-known kinds, queried via `function.parameters[i].kind`. Older tutorials show `dispatchReceiver = ...` as if it were a separate field; for new code prefer iterating `arguments` directly with the parameter shape.
 
@@ -229,7 +229,7 @@ If the replacement is generic (`fun <T> instrumented(x: T)`), and the original w
 
 This is the most common mistake from older tutorials. **Since Kotlin 2.2 (KT-68003), the dispatch receiver, extension receiver, context parameters, and value arguments all live in the same `arguments: ValueArgumentsList`** (an inner subclass of `ArrayList<IrExpression?>`). You do not need to copy `dispatchReceiver` and `extensionReceiver` as separate fields — copying `arguments[i]` slot-by-slot already covers them.
 
-The legacy `dispatchReceiver` getter/setter is `@UnsafeDuringIrConstructionAPI`, and `extensionReceiver` is `@DeprecatedForRemovalCompilerApi(_2_1_20)`; both still read/write the matching `arguments` slot under the hood. Using them in addition to `arguments[i] = ...` overwrites slot `i` twice. New code should index `arguments` directly with `function.parameters[i].kind`.
+The `dispatchReceiver` getter/setter survives at 2.4.0 as `@UnsafeDuringIrConstructionAPI` and still reads/writes the matching `arguments` slot under the hood; the `extensionReceiver` accessor was **removed in 2.4.0** (it was `@DeprecatedForRemovalCompilerApi(_2_1_20)` through 2.3.x). Using the surviving `dispatchReceiver` in addition to `arguments[i] = ...` overwrites slot `i` twice. New code should index `arguments` directly with `function.parameters[i].kind`.
 
 If your replacement has a *different* parameter shape than the original (e.g. converting an extension call to a top-level call), you must remap by parameter kind:
 

@@ -9,9 +9,9 @@ description: Refine the return type of a resolved function call at the call site
 
 The motivating use case is **`kotlinx.dataframe`**: when the user writes `df.add("score") { 1 }`, the plugin wants the expression's type to be `DataFrame<NewSchema>` where `NewSchema` is a generated local class encoding the union of the original schema and the new "score: Int" column. Ordinary call resolution can't do this — it returns the function's declared return type. This extension hooks into the resolver between "candidate selected" and "outer call resolved" to substitute a more-specific return type and emit the local declarations needed to make that type meaningful.
 
-Source: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirFunctionCallRefinementExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.3.21/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirFunctionCallRefinementExtension.kt). Reference impls:
-- [`kotlin/plugins/plugin-sandbox/src/org/jetbrains/kotlin/plugin/sandbox/fir/DataFrameLikeCallsRefinementExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.3.21/plugins/plugin-sandbox/src/org/jetbrains/kotlin/plugin/sandbox/fir/DataFrameLikeCallsRefinementExtension.kt) (sandbox prototype)
-- [`kotlin/plugins/kotlin-dataframe/kotlin-dataframe.k2/src/org/jetbrains/kotlinx/dataframe/plugin/extensions/FunctionCallTransformer.kt`](https://github.com/JetBrains/kotlin/blob/v2.3.21/plugins/kotlin-dataframe/kotlin-dataframe.k2/src/org/jetbrains/kotlinx/dataframe/plugin/extensions/FunctionCallTransformer.kt) (production)
+Source: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirFunctionCallRefinementExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirFunctionCallRefinementExtension.kt). Reference impls:
+- [`kotlin/plugins/plugin-sandbox/src/org/jetbrains/kotlin/plugin/sandbox/fir/DataFrameLikeCallsRefinementExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.0/plugins/plugin-sandbox/src/org/jetbrains/kotlin/plugin/sandbox/fir/DataFrameLikeCallsRefinementExtension.kt) (sandbox prototype)
+- [`kotlin/plugins/kotlin-dataframe/kotlin-dataframe.k2/src/org/jetbrains/kotlinx/dataframe/plugin/extensions/FunctionCallTransformer.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.0/plugins/kotlin-dataframe/kotlin-dataframe.k2/src/org/jetbrains/kotlinx/dataframe/plugin/extensions/FunctionCallTransformer.kt) (production)
 
 ## What you get
 

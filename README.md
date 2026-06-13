@@ -2,7 +2,7 @@
 
 A Claude Code plugin shipping a single skill, `kotlin-compiler-plugin`, that bundles **24 reference guides** covering Kotlin compiler plugin development. Use it when building K2 (FIR) frontend extensions, IR backend transformations, custom diagnostics, synthetic declarations, scripting / REPL dialects, or shipping a compiler plugin via Gradle.
 
-Every API claim is cross-referenced against the [Kotlin compiler source](https://github.com/JetBrains/kotlin) (2.3.x).
+Every API claim is cross-referenced against the [Kotlin compiler source](https://github.com/JetBrains/kotlin) (2.4.x).
 
 ## Installation
 
@@ -35,7 +35,7 @@ The plugin ships one skill at `skills/kotlin-compiler-plugin/`. Its `references/
 ### FIR (K2 frontend) extensions
 | Topic | What it covers |
 |---|---|
-| `fir-extensions-overview` | Architecture, the 18 extension points, FirSession lifecycle, how to choose |
+| `fir-extensions-overview` | Architecture, the 17 extension points, FirSession lifecycle, how to choose |
 | `fir-predicate-system` | Declarative annotation matching DSL (`annotated`, `parentAnnotated`, etc.) |
 | `fir-additional-checkers-extension` | Emit custom compile-time diagnostics (warnings/errors) on user code |
 | `fir-declaration-generation-extension` | Synthesise classes/functions/properties/constructors visible to source |
@@ -104,7 +104,7 @@ Each creates a tempdir containing only the task's `SPEC.md`. The agent works the
 
 ## Compatibility
 
-- **Kotlin**: targets the **latest stable** (currently 2.3.x). Reference guides are written assuming the current version; for upgrading from older Kotlin compilers see the per-topic `CHANGES.md`.
+- **Kotlin**: targets the **latest stable** (currently 2.4.x). Reference guides are written assuming the current version; for upgrading from older Kotlin compilers see the per-topic `CHANGES.md`.
 - **Gradle**: 9.5.0+ recommended; 8.x mostly works for the user-facing patterns
 - **JDK**: 21+ for compilation. Java 25 currently exposes a Kotlin BTAPI bug — see `skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/guide.md` for the workaround.
 
@@ -149,6 +149,7 @@ For plugin authors writing code that targets multiple Kotlin compiler versions, 
 
 | Plugin version | Validated against Kotlin |
 |---|---|
+| 0.3.0 | 2.4.0 |
 | 0.2.1 | 2.3.21 |
 | 0.2.0 | 2.3.21 |
 | 0.1.1 | 2.3.21 |

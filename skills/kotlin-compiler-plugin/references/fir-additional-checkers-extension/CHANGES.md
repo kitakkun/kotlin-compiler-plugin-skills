@@ -1,6 +1,6 @@
 # Changes affecting this skill
 
-API migrations relevant to writing FIR additional-checkers extensions. This skill targets the **current stable Kotlin** (2.3.x).
+API migrations relevant to writing FIR additional-checkers extensions. This skill targets the **current stable Kotlin** (2.4.0).
 
 ## Kotlin 2.1.x → 2.2.0 → 2.2.20 (the context-parameter migration timeline)
 

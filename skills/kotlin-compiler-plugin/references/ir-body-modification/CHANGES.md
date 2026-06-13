@@ -1,6 +1,14 @@
 # Changes affecting this skill
 
-API migrations relevant to modifying function bodies in IR. This skill targets the **current stable Kotlin** (2.3.x).
+API migrations relevant to modifying function bodies in IR. This skill targets the **current stable Kotlin** (2.4.0).
+
+## Kotlin 2.3 → 2.4: `IrFunction` parameter accessors removed / read-only
+
+- `IrFunction.valueParameters` — **removed** (no deprecated alias). Use `parameters` and filter by `kind` (`parameters.filter { it.kind == IrParameterKind.Regular }` for the old `valueParameters` semantics).
+- `IrFunction.extensionReceiverParameter` — **removed**. Find it via `parameters.singleOrNull { it.kind == IrParameterKind.ExtensionReceiver }`.
+- `IrFunction.dispatchReceiverParameter` — **survives but is now read-only** (`val`, was `var` in 2.3.x). Reading is fine; code that *assigned* it must now mutate `parameters` (e.g. rebuild the list) instead.
+
+Both removed members were error-level `@DeprecatedForRemovalCompilerApi` through 2.3.x, so plugins that already migrated to `parameters` are unaffected.
 
 ## Kotlin 2.2 → 2.3
 
