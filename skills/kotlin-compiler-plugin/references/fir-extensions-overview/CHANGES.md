@@ -1,6 +1,16 @@
 # Changes affecting this skill
 
-API migrations relevant to the FIR extension architecture overview. This skill targets the **current stable Kotlin** (2.3.x).
+API migrations relevant to the FIR extension architecture overview. This skill targets the **current stable Kotlin** (2.4.0).
+
+## Kotlin 2.3 → 2.4
+
+### `AVAILABLE_EXTENSIONS` dropped from 18 to 17 entries
+
+`FirReplSnippetResolveExtension::class` was entry 15 in `FirExtensionRegistrar.AVAILABLE_EXTENSIONS` through 2.3.x; in 2.4.0 it is **no longer registered** there and no longer appears anywhere in `FirExtensionRegistrar.kt`. The list is now 17 entries (verified against `FirExtensionRegistrar.kt:23-43` at v2.4.0). If you relied on registering a `FirReplSnippetResolveExtension` through the registrar DSL, re-check `fir-repl-snippet-extensions` for the 2.4.0 REPL-resolution path.
+
+### Line-number drift in `FirExtensionRegistrar.kt`
+
+The whole file shifted up by ~17 lines (the list and the `unaryPlus` DSL block both moved). EVIDENCE.md citations were re-pinned to v2.4.0 line numbers (`AVAILABLE_EXTENSIONS` 23-43, `ALLOWED_EXTENSIONS_FOR_LIBRARY_SESSION` 45-48, `registerDiagnosticContainers` 234-236, `registeredPluginAnnotations.initialize()` 323).
 
 ## Kotlin 2.2 → 2.3
 

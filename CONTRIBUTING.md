@@ -43,12 +43,14 @@ For a reference that walks through a more involved pattern (FIR checker, IR tran
 
 Suppose Kotlin 2.4 ships:
 
-1. Try to build `skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/example/` against 2.4 — note every API or flag that broke.
+0. **Establish the target tag first — do not trust a local clone's current checkout.** Confirm the new version is actually released (`git ls-remote --tags https://github.com/JetBrains/kotlin 'v2.4.*'` — a local clone's tag list can be stale, and its working tree may sit on an unrelated dev build like `build-2.4.20-dev-*`). Then `git -C <kotlin-clone> fetch --no-tags origin tag v2.4.0`. Read source at that exact tag with `git show v2.4.0:<path>` / `git grep … v2.4.0` rather than relying on whatever is checked out. The "latest" is whatever JetBrains has tagged as a final release, **not** whatever the clone happens to point at.
+1. Diff the cited source paths between tags to scope the work: `git diff --name-only <old-tag> <new-tag> -- $(grep -rhoE 'compiler/[^)]+\.kt' skills/*/references/*/EVIDENCE.md | sort -u)`. Then try to build `skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/example/` against the new version — note every API or flag that broke.
 2. For each break, decide which reference is affected. Update its `guide.md` to reflect the new API. Add a `## Kotlin 2.3 → 2.4` section at the top of that reference's `CHANGES.md`.
-3. Re-validate by following each affected reference's `guide.md` from scratch (a fresh agent on a fresh checkout is the gold-standard test).
-4. Bump `.claude-plugin/plugin.json` `version` per semver — typically PATCH if the changes are pure migration recipes, MINOR if a recommended approach changes substantially. The plugin's version is independent of Kotlin's.
-5. Update `README.md`'s "Compatibility matrix" with a new row for the new plugin version → Kotlin range.
-6. Add an entry to root `CHANGELOG.md` describing the release.
+3. Re-pin permalinks and re-verify line numbers: run `scripts/bump_kotlin_version.sh <old-tag> <new-tag>` (permalinks + version strings), then `scripts/verify_citations.sh <kotlin-clone>` to catch citations that now land on the wrong line (drift) or a moved/renamed path. Fix each flagged line range. **Note:** `bump_kotlin_version.sh` over-reaches on `README.md` (it rewrites historical Compatibility-matrix rows) and on EVIDENCE files that deliberately compare two old tags — review its diff, don't apply blindly.
+4. Re-validate by following each affected reference's `guide.md` from scratch (a fresh agent on a fresh checkout is the gold-standard test).
+5. Bump `.claude-plugin/plugin.json` `version` per semver — typically PATCH if the changes are pure migration recipes, MINOR if a recommended approach changes substantially. The plugin's version is independent of Kotlin's.
+6. Update `README.md`'s "Compatibility matrix" with a new row for the new plugin version → Kotlin range (keep the historical rows). Bump the "targets … (2.x.x)" markers in `README.md`, `SKILL.md`, and `NOTICE.md`.
+7. Add an entry to root `CHANGELOG.md` describing the release.
 
 ## Code samples
 

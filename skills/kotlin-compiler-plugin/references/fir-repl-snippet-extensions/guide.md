@@ -72,7 +72,9 @@ The fourth method — `MutableList<FirStatement>.configure(...)` — is the dist
 
 ## 2. `FirReplSnippetResolveExtension`
 
-The resolve extension owns the snippet history. The reference scripting implementation stores a `FirReplHistoryProvider` as a private field of the extension class and writes to it directly from `updateResolved(...)` — there is no built-in session-level accessor.
+The resolve extension owns the snippet history. The reference scripting implementation stores a `FirReplHistoryProvider` as a private field of the extension class and writes to it directly from `updateResolved(...)`.
+
+> **Kotlin 2.4.0:** `FirReplSnippetResolveExtension` is now a `FirExtensionSessionComponent` (it was a standalone `FirExtension` through 2.3.x) and is no longer a separate `AVAILABLE_EXTENSIONS` entry. The subclass + override code below is unchanged, and `+::MyReplResolver` registration still works (via the `FirExtensionSessionComponent` overload). The compiler now reads it back through the single nullable accessor `FirSession.replSnippetResolveExtension` instead of the old `FirExtensionService.replSnippetResolveExtensions` list. See CHANGES.md.
 
 ```kotlin
 package com.example.repl.fir
@@ -271,7 +273,7 @@ The reference impl `FirReplHistoryProviderImpl` (in `kotlin/plugins/scripting/sc
 
 ### Where to instantiate it
 
-`FirReplHistoryProvider` is declared as a `FirSessionComponent`, but the scripting plugin does **not** install it on the session via `+::Component`. Instead it stores the instance in its host-configuration object (`ScriptingHostConfiguration.repl.firReplHistoryProvider`) and reads it from the resolve extension's constructor (shown in section 2 above). The session-component interface is currently just a marker — there is no `session.replHistoryProvider` accessor in v2.3.21.
+`FirReplHistoryProvider` is declared as a `FirSessionComponent`, but the scripting plugin does **not** install it on the session via `+::Component`. Instead it stores the instance in its host-configuration object (`ScriptingHostConfiguration.repl.firReplHistoryProvider`) and reads it from the resolve extension's constructor (shown in section 2 above). The `FirReplHistoryProvider` session-component interface is still just a marker as of v2.4.0 — there is no built-in `session.replHistoryProvider` accessor. (Note: the *resolve extension itself* does gain a `FirSession.replSnippetResolveExtension` accessor in 2.4.0, but the history provider does not.)
 
 If you want session-level access (so other FIR extensions can also enumerate snippets), implement your own `FirSession` accessor via [`fir-session-components`](../fir-session-components/guide.md)' standard pattern: have a `FirExtensionSessionComponent` whose property exposes a `MyReplHistoryProvider`, and access it via `FirSession.sessionComponentAccessor<MyReplHistoryProviderComponent>()`. This is the same shape [`fir-session-components`](../fir-session-components/guide.md) documents for any plugin state.
 

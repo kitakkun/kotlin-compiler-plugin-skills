@@ -1,6 +1,6 @@
 ---
 name: kotlin-compiler-plugin
-description: Build a Kotlin compiler plugin — scaffold a project, write K2 (FIR) frontend extensions, write IR backend transformations, test with the official infrastructure, debug what the plugin actually does, package the plugin as a Gradle plugin, and ship it across Kotlin versions. Use when (1) starting a new compiler-plugin project, (2) adding or modifying any FIR/IR extension, (3) writing custom diagnostics or synthetic declarations, (4) building a `.kts`/REPL dialect, (5) instrumenting or rewriting calls/bodies at IR time, (6) packaging via `KotlinCompilerPluginSupportPlugin`, (7) supporting multiple Kotlin compiler versions in one plugin, or (8) debugging/testing any of the above. Targets Kotlin 2.3.x. This SKILL.md is a router — read the matching `references/<topic>/guide.md` for the actual how-to, plus the sibling `EVIDENCE.md` / `CHANGES.md` when you need primary-source citations or Kotlin-version migration notes. NOT a tutorial on the Kotlin language, the IntelliJ debugger basics, JUnit basics, or Gradle plugin authoring basics.
+description: Build a Kotlin compiler plugin — scaffold a project, write K2 (FIR) frontend extensions, write IR backend transformations, test with the official infrastructure, debug what the plugin actually does, package the plugin as a Gradle plugin, and ship it across Kotlin versions. Use when (1) starting a new compiler-plugin project, (2) adding or modifying any FIR/IR extension, (3) writing custom diagnostics or synthetic declarations, (4) building a `.kts`/REPL dialect, (5) instrumenting or rewriting calls/bodies at IR time, (6) packaging via `KotlinCompilerPluginSupportPlugin`, (7) supporting multiple Kotlin compiler versions in one plugin, or (8) debugging/testing any of the above. Targets Kotlin 2.4.x. This SKILL.md is a router — read the matching `references/<topic>/guide.md` for the actual how-to, plus the sibling `EVIDENCE.md` / `CHANGES.md` when you need primary-source citations or Kotlin-version migration notes. NOT a tutorial on the Kotlin language, the IntelliJ debugger basics, JUnit basics, or Gradle plugin authoring basics.
 ---
 
 # Kotlin compiler plugin
@@ -54,7 +54,7 @@ When the change is small (one file, one fix, one new diagnostic on an existing c
 ### FIR (K2 frontend) extensions
 | Topic | What it covers |
 |---|---|
-| `fir-extensions-overview` | Architecture, the 18 extension points, FirSession lifecycle, how to choose |
+| `fir-extensions-overview` | Architecture, the 17 extension points, FirSession lifecycle, how to choose |
 | `fir-predicate-system` | Declarative annotation matching DSL (`annotated`, `parentAnnotated`, etc.) |
 | `fir-additional-checkers-extension` | Emit custom compile-time diagnostics (warnings/errors) on user code |
 | `fir-declaration-generation-extension` | Synthesise classes/functions/properties/constructors visible to source |
@@ -116,6 +116,6 @@ When a plugin author upgrades their Kotlin compiler and their plugin stops compi
 
 ## Compatibility
 
-- Kotlin: targets the latest stable (currently 2.3.x).
+- Kotlin: targets the latest stable (currently 2.4.x).
 - Gradle: 9.5.0+ recommended; 8.x mostly works for the user-facing patterns.
 - JDK: 21+ for compilation. Java 25 currently exposes a Kotlin BTAPI bug — see `references/compiler-plugin-bootstrap/guide.md` for the workaround.

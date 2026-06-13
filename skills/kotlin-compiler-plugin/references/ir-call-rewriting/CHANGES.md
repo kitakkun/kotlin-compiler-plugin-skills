@@ -1,6 +1,16 @@
 # Changes affecting this skill
 
-API migrations relevant to rewriting calls in IR. This skill targets the **current stable Kotlin** (2.3.x).
+API migrations relevant to rewriting calls in IR. This skill targets the **current stable Kotlin** (2.4.0).
+
+## Kotlin 2.3 → 2.4: deprecated argument accessors removed
+
+The unified-`arguments` migration (begun in 2.2, see below) reached its endpoint in 2.4.0. On `IrMemberAccessExpression`, the accessors that were `@DeprecatedForRemovalCompilerApi(_2_1_20)` through 2.3.x are now **gone**:
+
+- `extensionReceiver` — **removed**. Index `arguments` at the slot whose `function.parameters[i].kind == IrParameterKind.ExtensionReceiver` instead.
+- `valueArgumentsCount` — **removed**. Use `arguments.size` (note: it counts receivers and context parameters too, not just value arguments).
+- `getValueArgument(i)` / `putValueArgument(i, v)` — **removed**. Index `arguments` directly.
+
+`dispatchReceiver` **survives** as an `@UnsafeDuringIrConstructionAPI` convenience getter/setter over `arguments[0]` (the file `IrMemberAccessExpression.kt` shrank from ~580 to 225 lines in the process). Code that already followed this skill's "index `arguments` by parameter kind" guidance compiles unchanged; only code still using the legacy accessors breaks.
 
 ## Kotlin 2.1 → 2.2 (KT-68003): unified `arguments` list
 

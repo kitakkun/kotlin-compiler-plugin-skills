@@ -43,7 +43,7 @@ Apache License 2.0**, not this repository's MIT License.
   `Fir2IrScriptConfiguratorExtensionImpl`, `FirReplSnippetConfiguratorExtensionImpl`,
   `FirReplSnippetResolveExtensionImpl`, `Fir2IrReplSnippetConfiguratorExtensionImpl`,
   `FirReplHistoryProviderImpl`).
-- Citations are pinned to tag `v2.3.21` unless noted otherwise.
+- Citations are pinned to tag `v2.4.0` unless noted otherwise.
 
 ## Kotlin/compiler-plugin-template
 

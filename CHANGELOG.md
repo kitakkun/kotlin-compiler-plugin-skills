@@ -6,6 +6,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-13
+
+### Changed
+
+- **Retargeted the whole skill from Kotlin 2.3.21 to 2.4.0.** All EVIDENCE.md permalinks re-pinned to `v2.4.0` and every cited line number re-verified against the tag (299 citations, 0 dangling). Source-tree moves followed: `compiler/cli/cli-common/` → `compiler/cli/cli-base/`, `core/compiler.common/.../name/SpecialNames.kt` → `core/names/.../SpecialNames.kt`.
+- **IR unified-arguments migration completed (KT-68003/KT-70054).** Documented the 2.4.0 **removal** of `IrMemberAccessExpression.extensionReceiver` / `valueArgumentsCount` / `getValueArgument` / `putValueArgument` and `IrFunction.valueParameters` / `extensionReceiverParameter`; `dispatchReceiver` survives and `IrFunction.dispatchReceiverParameter` is now read-only. Updated `ir-call-rewriting`, `ir-body-modification`, `fir-function-type-kind-extension`.
+- **`FirReplSnippetResolveExtension` became a `FirExtensionSessionComponent`** (left `AVAILABLE_EXTENSIONS`, which dropped 18 → 17 entries; access is now `FirSession.replSnippetResolveExtension`). Updated `fir-repl-snippet-extensions` and `fir-extensions-overview`.
+- **`IrGeneratedDeclarationsRegistrar` annotation APIs now use `IrAnnotation`** (was `IrConstructorCall`). Updated `ir-synthetic-class-generation`.
+- Added `## Kotlin 2.3 → 2.4` sections to the affected reference `CHANGES.md` files; bumped each guide's "targets" line to 2.4.0.
+
+### Added
+
+- `scripts/verify_citations.sh` — verifies every EVIDENCE/SKILL permalink resolves at its pinned tag and surfaces the cited source line, for spot-checking line-number drift on future version bumps.
+
+### Fixed
+
+- Recorded that the JDK 25 / BTAPI `JavaVersion.parse` workaround is **still required** on 2.4.0 (bundled `intellijSdk` unchanged), correcting the earlier "likely resolved in 2.4.x" note.
+
 ## [0.2.1] - 2026-05-27
 
 ### Added
