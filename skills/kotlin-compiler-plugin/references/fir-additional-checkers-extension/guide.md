@@ -157,6 +157,7 @@ Each `Fir*Checker` base class corresponds to a FIR node type. The most common on
 | `FirPropertyChecker` | every property | `FirProperty` |
 | `FirFunctionCallChecker` | every call expression | `FirFunctionCall` |
 | `FirReturnExpressionChecker` | every `return` | `FirReturnExpression` |
+| `FirTryExpressionChecker` | every `try`/`catch`/`finally` expression | `FirTryExpression` (bucket: `expressionCheckers.tryExpressionCheckers`) |
 | `FirTypeRefChecker` | every written type reference | `FirTypeRef` |
 | `FirFileChecker` | every source file | `FirFile` |
 | `FirBasicDeclarationChecker` | catch-all for any declaration | `FirDeclaration` |
@@ -401,6 +402,8 @@ import org.jetbrains.kotlin.com.intellij.psi.PsiElement
 The `kotlin-compiler-embeddable` JAR shades `com.intellij.*` to avoid clashes with JetBrains IDE plugins; if you depend on `kotlin-compiler-embeddable` (which compiler-plugin modules typically do), the unshaded `com.intellij.psi.PsiElement` is not on the classpath and the import fails to resolve.
 
 Worse: when this import fails inside a `context(... DiagnosticReporter)`-bearing checker function, the compiler error you actually see may say "context parameter is unresolved" or "no context argument found" — masking the real problem (broken `PsiElement` import). If you see context-parameter errors after adding a `error0<PsiElement>` factory, **check this import first**.
+
+> ⚠️ **This shaded `PsiElement` reference is `reified`, so it is baked into your plugin's bytecode** — which means a plugin built against the shaded `kotlin-compiler-embeddable` cannot also run under the **un-shaded** `kotlin-compiler` that the official test framework uses, and vice versa (`NoClassDefFoundError: com/intellij/psi/PsiElement`). If you test with both the Gradle sample (Pattern A, embeddable) and the official framework (Pattern B, un-shaded), read the "reified `PsiElement`" exception in [`compiler-plugin-testing`](../compiler-plugin-testing/guide.md): compile un-shaded for the framework, then `shadowJar`-relocate `com.intellij` → `org.jetbrains.kotlin.com.intellij` for distribution and for the `-Xplugin=` sample.
 
 ### Walking a class's members: `.declarations` requires `@OptIn(DirectDeclarationsAccess::class)`
 

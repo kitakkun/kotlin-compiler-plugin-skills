@@ -2,6 +2,32 @@
 
 API migrations relevant to writing FIR additional-checkers extensions. This skill targets the **current stable Kotlin** (2.4.0).
 
+## Kotlin 2.3 → 2.4
+
+### `CheckerContext` is a `SessionHolder` — don't pass `session` explicitly to `fullyExpandedType`
+
+On 2.4.0, `check()` runs inside `context(context: CheckerContext, reporter: DiagnosticReporter)`, and `CheckerContext` **is a `SessionHolder`**. `ConeKotlinType.fullyExpandedType` gained `context(SessionHolder)` overloads (`TypeExpansionUtils.kt:57`, `:63` at v2.4.0): a no-arg `fullyExpandedType()` that uses the implicit `SessionHolder`, plus a `context(_: SessionHolder) fullyExpandedType(useSiteSession)` form. So calling `coneType.fullyExpandedType(session)` from inside a checker — where a `SessionHolder` is already in implicit scope — now triggers an error along the lines of *"When a SessionHolder is available as an implicit value, passing the session explicitly is only required when it's different…"*.
+
+Two correct shapes:
+
+```kotlin
+// (a) Inside the checker — a SessionHolder is implicitly available, so pass nothing:
+context(context: CheckerContext, reporter: DiagnosticReporter)
+override fun check(expression: FirFunctionCall) {
+    val expanded = expression.resolvedType.fullyExpandedType()   // no `session` argument
+}
+
+// (b) For 2.3.x ⇔ 2.4.0 cross-compat — expand in a plain helper *outside* any
+//     SessionHolder context, where the explicit-session overload still applies:
+private fun expand(type: ConeKotlinType, session: FirSession) = type.fullyExpandedType(session)
+```
+
+The 2.3.x no-arg overload may be absent, which is why the cross-version path uses an explicit-session helper deliberately placed where no `SessionHolder` is in scope.
+
+### `-Xcontext-parameters` may now warn as redundant
+
+The checker `check()` API has used context parameters since 2.2.20 (see the timeline below), so the `-Xcontext-parameters` flag is still needed for plugins that build against ≤2.3.x. On 2.4.0 the compiler reports the flag as **redundant** for the affected code. Keep it while you still compile against ≤2.3.x; drop it once you target 2.4+ exclusively.
+
 ## Kotlin 2.1.x → 2.2.0 → 2.2.20 (the context-parameter migration timeline)
 
 The `FirDeclarationChecker.check` API moved to context parameters in three stages — the precise version range matters when targeting older compilers:

@@ -24,6 +24,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Recorded that the JDK 25 / BTAPI `JavaVersion.parse` workaround is **still required** on 2.4.0 (bundled `intellijSdk` unchanged), correcting the earlier "likely resolved in 2.4.x" note.
 
+### Improved (from building a plugin against 2.4.0)
+
+- **Shaded ⇔ un-shaded + `reified PsiElement`**: documented that a plugin whose diagnostic factories use `reified PsiElement` cannot serve Pattern A (embeddable) and Pattern B (un-shaded) from one compiled artifact, and wired the `shadowJar`-relocate solution across `compiler-plugin-testing`, `compiler-plugin-bootstrap`, `fir-additional-checkers-extension`, and `gradle-plugin-integration`.
+- **Diagnostic tests need `// RUN_PIPELINE_TILL: FRONTEND` on 2.4** (else `PhasedPipelineChecker` aborts); added it to the diagnostic runner's `defaultDirectives` with the rationale (also dodges the R8/dexing `NoClassDefFoundError`).
+- **`fullyExpandedType`**: `CheckerContext` is a `SessionHolder` on 2.4, so passing `session` explicitly is now an error inside a checker; documented the no-arg form and a cross-version helper.
+- **`multi-version-kotlin-support`**: added "Strategy 0 — single source on the common API" as the correct first choice for adjacent minors, before reflection.
+- **`fir-additional-checkers-extension`**: added `FirTryExpressionChecker` to the checker catalog; noted `-Xcontext-parameters` now warns as redundant on 2.4.
+
 ## [0.2.1] - 2026-05-27
 
 ### Added
