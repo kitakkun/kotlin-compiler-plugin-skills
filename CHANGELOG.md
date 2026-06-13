@@ -24,6 +24,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Recorded that the JDK 25 / BTAPI `JavaVersion.parse` workaround is **still required** on 2.4.0 (bundled `intellijSdk` unchanged), correcting the earlier "likely resolved in 2.4.x" note.
 
+### Improved (from building a plugin against 2.4.0)
+
+- **Shaded ⇔ un-shaded + `reified PsiElement`**: documented that a plugin whose diagnostic factories use `reified PsiElement` cannot serve Pattern A (embeddable) and Pattern B (un-shaded) from one compiled artifact, and wired the `shadowJar`-relocate solution across `compiler-plugin-testing`, `compiler-plugin-bootstrap`, `fir-additional-checkers-extension`, and `gradle-plugin-integration`.
+- **Diagnostic tests need `// RUN_PIPELINE_TILL: FRONTEND` on 2.4** (else `PhasedPipelineChecker` aborts); added it to the diagnostic runner's `defaultDirectives` with the rationale (also dodges the R8/dexing `NoClassDefFoundError`).
+- **`fullyExpandedType`**: `CheckerContext` is a `SessionHolder` on 2.4, so passing `session` explicitly is now an error inside a checker; documented the no-arg form and a cross-version helper.
+- **`multi-version-kotlin-support`**: added "Strategy 0 — single source on the common API" as the correct first choice for adjacent minors, before reflection.
+- **`fir-additional-checkers-extension`**: added `FirTryExpressionChecker` to the checker catalog; noted `-Xcontext-parameters` now warns as redundant on 2.4.
+
+### Validated against
+
+- Kotlin 2.4.0, Gradle 9.5.0, JDK 21.
+- All six accuracy benchmarks (`evaluation/`) re-run by fresh sub-agents against the 2.4.0 skill and **independently re-verified — 100% of mandatory criteria across all six** (01 small checker 9/9, 02 synthesis 10/10, 03 IR trace 13/13, 04 type attributes 12/12, 05 multi-version 12/12, 06 extreme JSON-serialize 16/16 + 2/2 optional). No accuracy regression from the 2.3.21 baseline. The agents' field experience confirmed the new 2.4 notes (e.g. `-Xcontext-parameters` redundancy, the JDK 25 BTAPI pin).
+- Minor doc-gap candidates surfaced for a future patch (not 2.4.0-correctness issues): `ir-body-modification` should list the `irBlockBody` / `transformChildrenVoid` / `irSet` imports and the `IrConstImpl.Companion.double/long` constructors, and note that object-member calls keep a dispatch-receiver slot at `arguments[0]`; `multi-version-kotlin-support` could add a worked `buildscript{}` subproject snippet.
+
 ## [0.2.1] - 2026-05-27
 
 ### Added

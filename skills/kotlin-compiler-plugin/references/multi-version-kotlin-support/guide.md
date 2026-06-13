@@ -27,16 +27,47 @@ Multi-version support has two independent decisions, and conflating them is the 
 
 | Axis | Question | Options |
 |---|---|---|
-| Source organization | How is version-specific code expressed in the source tree? | (1) Pin, (2) Reflection, (3) Source preprocessor, (4) Compat-shim interface |
+| Source organization | How is version-specific code expressed in the source tree? | (0) Single source on the common API, (1) Pin, (2) Reflection, (3) Source preprocessor, (4) Compat-shim interface |
 | Distribution shape | How is the result shipped? | (A) Single fat JAR with bundled compat impls, (B) Per-Kotlin-version coordinates, (C) Branch per Kotlin |
 
 Strategies 3 and 4 are the **two production-quality patterns** in active use by community plugins (kotlinx-rpc and Metro respectively). They are not mutually exclusive — kotlinx-rpc combines both: CSM templates for inline drift plus a `FirVersionSpecificApi` interface for structural divergences. Distribution-wise, kotlinx-rpc ships per-Kotlin-version coordinates (B), Metro ships a fat JAR (A), JetBrains' in-tree plugins ship a branch per Kotlin (C).
 
 Read the strategy sections below for axis 1, then the "Distribution shape" section for axis 2; the "Practical recommendation" at the end maps common situations to the resulting (strategy × distribution) pair.
 
+## Strategy 0: Single source against the common API (adjacent minors)
+
+**The correct first choice for two adjacent minors** (e.g. 2.3.21 ⇔ 2.4.0), and the one to reach for *before* reflection. Between adjacent minors the compiler-plugin API drift is usually tiny, so you don't need reflection, preprocessing, or a compat-shim interface at all — you need **one source set that only touches the API both versions agree on**, plus a build that can flip the entire Kotlin toolchain with a single switch.
+
+Three moving parts:
+
+1. **Write to the lowest common denominator.** Where an API changed, use the form that compiles on *both* versions. Concretely for 2.3.21 ⇔ 2.4.0: index the unified `arguments` list / `parameters` (by `IrParameterKind`) rather than the accessors removed in 2.4 (`extensionReceiver`, `valueArgumentsCount`, `IrFunction.valueParameters`); call `fullyExpandedType` so it resolves on both (see `fir-additional-checkers-extension/CHANGES.md`); avoid an API that exists in only one of the two. If exactly one or two call sites can't be unified, that's the signal to add Strategy 2 (reflection) *for those sites only* — not to abandon the single source set.
+
+2. **Switch the whole toolchain from one property.** Drive the Kotlin version of the Gradle Kotlin plugin (KGP), `kotlin-compiler-embeddable`, and the test-framework artifacts from a single `kotlin.compiler` Gradle property so a build is `-Pkotlin.compiler=2.4.0` away from the other target. KGP itself is selected in `settings.gradle.kts` `pluginManagement` (it can't be set from a normal `dependencies` block):
+
+   ```kotlin
+   // settings.gradle.kts
+   pluginManagement {
+       val kotlinCompiler = providers.gradleProperty("kotlin.compiler").orElse("2.4.0")
+       plugins { kotlin("jvm") version kotlinCompiler.get() }
+   }
+   ```
+
+   ```kotlin
+   // plugin/build.gradle.kts
+   val kotlinCompiler = providers.gradleProperty("kotlin.compiler").orElse("2.4.0")
+   dependencies {
+       compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable:${kotlinCompiler.get()}")
+       // test-framework artifacts use the same property
+   }
+   ```
+
+3. **Prove both in CI.** Run the build matrix over the supported versions (`-Pkotlin.compiler=2.3.21` and `-Pkotlin.compiler=2.4.0`). See the "CI matrix" section below for the full workflow — Strategy 0 *is* that matrix applied to a single source set.
+
+Pros: zero per-version source, no reflection, trivial to maintain. Cons: only works while the two versions' relevant API actually overlaps — once a needed API exists in only one minor, escalate to Strategy 2/3/4. Distribution is usually a single JAR validated against both (shape A), or one coordinate per version (shape B) if you publish.
+
 ## Strategy 1: Pin to one Kotlin version
 
-The default. `plugin/build.gradle.kts`:
+The default for supporting a **single** Kotlin version. `plugin/build.gradle.kts`:
 
 ```kotlin
 dependencies {
