@@ -16,6 +16,10 @@ There are two infrastructures available, and they are usually not mutually exclu
 | **A. Gradle integration tests** | Smoke tests, demos, simple "does the plugin load and do its job" checks | Trivial — one extra Gradle module, no extra dependencies |
 | **B. Official compiler test framework** | FIR dump comparison, IR dump comparison, `<!DIAGNOSTIC!>` markers at exact source ranges, multi-module test data, K/JS+K/JVM matrix | Higher — extra dependency, system properties, JUnit 4+5 mix, brittle to compiler version bumps |
 
+> ⚠️ **Exception — a plugin with `reified PsiElement` diagnostic factories cannot serve A and B from one compiled artifact.** A and B disagree on *which* `kotlin-compiler` you compile against: Pattern A loads your plugin into the **shaded** `kotlin-compiler-embeddable` (so `PsiElement` must be imported as `org.jetbrains.kotlin.com.intellij.psi.PsiElement` — see [`fir-additional-checkers-extension`](../fir-additional-checkers-extension/guide.md)), while the Pattern B test framework runs it against the **un-shaded** `kotlin-compiler` (`com.intellij.psi.PsiElement`). With a `reified` type parameter (e.g. `error1<PsiElement>` factories, or `inline fun <reified P : PsiElement>`), that `PsiElement` class reference is **baked into the bytecode**, so the same `.class` can't load under both compilers — loading the un-shaded build into the embeddable compiler throws `NoClassDefFoundError: com/intellij/psi/PsiElement`, and vice versa.
+>
+> **Resolution:** compile and run the **un-shaded** build for Pattern B (so the official framework and its testData resolve), and **distribute a shaded JAR** produced by `shadowJar` relocating `com.intellij` → `org.jetbrains.kotlin.com.intellij`. Point Pattern A's `-Xplugin=` (and `getPluginArtifact()`) at that **relocated** JAR, not at the raw plugin classes. The shadow/relocate recipe — including the `com.gradleup.shadow` setup and the `relocate(...)` call — is in [`gradle-plugin-integration`](../gradle-plugin-integration/guide.md) ("Embeddable variant"); the `<plugin>.embeddable` module in [`compiler-plugin-bootstrap`](../compiler-plugin-bootstrap/guide.md)'s production layout exists for exactly this reason. Without a `reified` `PsiElement` (no factory bakes the class into bytecode), A and B coexist fine and this whole exception doesn't apply.
+
 Two **test types** apply equally to both infrastructures:
 
 | Type | What it verifies | PASS criterion |
@@ -307,7 +311,8 @@ A diagnostic test runner extends `AbstractFirPhasedDiagnosticTest`; a box test r
 |---|---|
 | `FirParser` | `org.jetbrains.kotlin.test` |
 | `TestConfigurationBuilder` | `org.jetbrains.kotlin.test.builders` |
-| `FirDiagnosticsDirectives`, `JvmEnvironmentConfigurationDirectives`, `CodegenTestDirectives` | `org.jetbrains.kotlin.test.directives` |
+| `FirDiagnosticsDirectives`, `JvmEnvironmentConfigurationDirectives`, `CodegenTestDirectives`, `TestPhaseDirectives` (`RUN_PIPELINE_TILL`) | `org.jetbrains.kotlin.test.directives` |
+| `TestPhase` (`FRONTEND` / `FIR2IR` / `BACKEND`) | `org.jetbrains.kotlin.test.services` |
 | `AbstractFirPhasedDiagnosticTest` | `org.jetbrains.kotlin.test.runners` |
 | `AbstractFirBlackBoxCodegenTestBase` | `org.jetbrains.kotlin.test.runners.codegen` |
 | `EnvironmentBasedStandardLibrariesPathProvider`, `KotlinStandardLibrariesPathProvider`, `EnvironmentConfigurator`, `TestServices`, `TestModule` | `org.jetbrains.kotlin.test.services` |
@@ -365,6 +370,12 @@ open class AbstractJvmDiagnosticTest : AbstractFirPhasedDiagnosticTest(FirParser
     override fun configure(builder: TestConfigurationBuilder) = with(builder) {
         super.configure(builder)
         defaultDirectives {
+            // REQUIRED on Kotlin 2.4: without a test phase the run aborts with
+            // "Please specify the test phase in `// RUN_PIPELINE_TILL` directive".
+            // FRONTEND stops the pipeline after FIR checking — exactly what a
+            // diagnostic test needs, and it also avoids the box-test backend steps
+            // (so no R8/D8 `NoClassDefFoundError: com/android/tools/r8/origin/Origin`).
+            RUN_PIPELINE_TILL with TestPhase.FRONTEND
             +FirDiagnosticsDirectives.FIR_DUMP
             +JvmEnvironmentConfigurationDirectives.FULL_JDK
         }
@@ -372,6 +383,8 @@ open class AbstractJvmDiagnosticTest : AbstractFirPhasedDiagnosticTest(FirParser
     }
 }
 ```
+
+**`RUN_PIPELINE_TILL` is mandatory for diagnostic tests on Kotlin 2.4.** The framework's `PhasedPipelineChecker` (`compiler/tests-common-new/.../services/PhasedPipelineChecker.kt`) fails any run that doesn't declare a phase, with `AssertionFailedError: Please specify the test phase in "// RUN_PIPELINE_TILL" directive`. The official `compiler-plugin-template` runner does **not** set it, so it's an easy trap. `TestPhase` (in `org.jetbrains.kotlin.test.services`) has `FRONTEND`, `FIR2IR`, `BACKEND`; `RUN_PIPELINE_TILL` and `TestPhase` live in `org.jetbrains.kotlin.test.directives` / `...services`. You can set it per-test instead with a `// RUN_PIPELINE_TILL: FRONTEND` line at the top of an individual `testData/*.kt` file, but putting it in the runner's `defaultDirectives` covers every diagnostic fixture at once.
 
 ```kotlin
 // test-fixtures/.../runners/AbstractJvmBoxTest.kt

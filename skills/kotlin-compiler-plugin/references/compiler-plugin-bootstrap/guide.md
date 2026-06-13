@@ -479,9 +479,11 @@ This skill ships a single `plugin/` module to keep the bootstrap minimal. Produc
 | `<plugin>.k1` | (legacy) K1 frontend extensions |
 | `<plugin>.k2` | K2/FIR frontend extensions (`FirExtensionRegistrar` + extensions) |
 | `<plugin>.backend` | `IrGenerationExtension` and IR transforms |
-| `<plugin>.embeddable` | a shaded JAR for consumers using `kotlin-compiler-embeddable` |
+| `<plugin>.embeddable` | a shaded JAR for consumers using `kotlin-compiler-embeddable` — produced by `shadowJar` relocating `com.intellij` → `org.jetbrains.kotlin.com.intellij` |
 
 The split lets each module depend on the smallest slice of compiler API it needs, makes K1 removal a single-module deletion, and isolates the embeddable shading. For the bootstrap, stay flat; refactor when you start adding FIR.
+
+The `<plugin>.embeddable` module is not just a packaging nicety: if your FIR checkers declare `reified PsiElement` diagnostic factories, the `PsiElement` class reference is baked into the bytecode, so a build compiled against the **un-shaded** `kotlin-compiler` (which the official test framework requires) will throw `NoClassDefFoundError: com/intellij/psi/PsiElement` when loaded into the **shaded** embeddable compiler — and vice versa. The shaded `<plugin>.embeddable` JAR is what you ship to consumers and point `-Xplugin=` at; see the "Embeddable variant" recipe in [`gradle-plugin-integration`](../gradle-plugin-integration/guide.md) and the "reified `PsiElement`" exception in [`compiler-plugin-testing`](../compiler-plugin-testing/guide.md).
 
 ## Suggested reading order from here
 
