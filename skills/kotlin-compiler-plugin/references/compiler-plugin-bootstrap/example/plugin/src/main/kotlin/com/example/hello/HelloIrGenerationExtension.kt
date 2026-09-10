@@ -7,7 +7,7 @@ import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 
 class HelloIrGenerationExtension : IrGenerationExtension {
-    // Reading IrFile.declarations is gated behind @UnsafeDuringIrConstructionAPI on Kotlin 2.4.0.
+    // Reading IrFile.declarations is gated behind @UnsafeDuringIrConstructionAPI since Kotlin 2.4.0.
     @OptIn(UnsafeDuringIrConstructionAPI::class)
     override fun generate(moduleFragment: IrModuleFragment, pluginContext: IrPluginContext) {
         val out = StringBuilder()

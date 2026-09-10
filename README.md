@@ -149,6 +149,7 @@ For plugin authors writing code that targets multiple Kotlin compiler versions, 
 
 | Plugin version | Validated against Kotlin |
 |---|---|
+| 0.3.2 | 2.4.20 |
 | 0.3.1 | 2.4.10 |
 | 0.3.0 | 2.4.0 |
 | 0.2.1 | 2.3.21 |
