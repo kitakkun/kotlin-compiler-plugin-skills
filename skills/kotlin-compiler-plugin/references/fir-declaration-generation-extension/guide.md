@@ -9,7 +9,7 @@ The K2 extension point that adds **synthetic declarations** the rest of the fron
 
 > **Source-visibility scope** — declarations created by this extension are visible to source code *within the module being compiled*. To make a synthetic member referenceable from a *downstream* module that depends on the current one, that's a different mechanism: generate at IR stage and call `pluginContext.metadataDeclarationRegistrar.registerFunctionAsMetadataVisible(...)` (see [`ir-plugincontext-usage`](../ir-plugincontext-usage/guide.md)). Notably, IR-side generation + metadata registration is the kotlinx-serialization "write$Self" pattern: visible from downstream modules, but *not* visible to source within the same module — the asymmetry is intentional. Empirically verified end-to-end: a function added only via `IrFactory.addFunction` + `registerFunctionAsMetadataVisible` resolves from another module's source but stays unresolved within the originating module.
 
-Source: [`kotlin/compiler/fir/providers/src/org/jetbrains/kotlin/fir/extensions/FirDeclarationGenerationExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/fir/providers/src/org/jetbrains/kotlin/fir/extensions/FirDeclarationGenerationExtension.kt).
+Source: [`kotlin/compiler/fir/providers/src/org/jetbrains/kotlin/fir/extensions/FirDeclarationGenerationExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/providers/src/org/jetbrains/kotlin/fir/extensions/FirDeclarationGenerationExtension.kt).
 
 ## What you can generate
 

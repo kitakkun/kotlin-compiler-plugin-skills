@@ -42,26 +42,26 @@ Three moving parts:
 
 1. **Write to the lowest common denominator.** Where an API changed, use the form that compiles on *both* versions. Concretely for 2.3.21 ⇔ 2.4.0: index the unified `arguments` list / `parameters` (by `IrParameterKind`) rather than the accessors removed in 2.4 (`extensionReceiver`, `valueArgumentsCount`, `IrFunction.valueParameters`); call `fullyExpandedType` so it resolves on both (see `fir-additional-checkers-extension/CHANGES.md`); avoid an API that exists in only one of the two. If exactly one or two call sites can't be unified, that's the signal to add Strategy 2 (reflection) *for those sites only* — not to abandon the single source set.
 
-2. **Switch the whole toolchain from one property.** Drive the Kotlin version of the Gradle Kotlin plugin (KGP), `kotlin-compiler-embeddable`, and the test-framework artifacts from a single `kotlin.compiler` Gradle property so a build is `-Pkotlin.compiler=2.4.0` away from the other target. KGP itself is selected in `settings.gradle.kts` `pluginManagement` (it can't be set from a normal `dependencies` block):
+2. **Switch the whole toolchain from one property.** Drive the Kotlin version of the Gradle Kotlin plugin (KGP), `kotlin-compiler-embeddable`, and the test-framework artifacts from a single `kotlin.compiler` Gradle property so a build is `-Pkotlin.compiler=2.4.10` away from the other target. KGP itself is selected in `settings.gradle.kts` `pluginManagement` (it can't be set from a normal `dependencies` block):
 
    ```kotlin
    // settings.gradle.kts
    pluginManagement {
-       val kotlinCompiler = providers.gradleProperty("kotlin.compiler").orElse("2.4.0")
+       val kotlinCompiler = providers.gradleProperty("kotlin.compiler").orElse("2.4.10")
        plugins { kotlin("jvm") version kotlinCompiler.get() }
    }
    ```
 
    ```kotlin
    // plugin/build.gradle.kts
-   val kotlinCompiler = providers.gradleProperty("kotlin.compiler").orElse("2.4.0")
+   val kotlinCompiler = providers.gradleProperty("kotlin.compiler").orElse("2.4.10")
    dependencies {
        compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable:${kotlinCompiler.get()}")
        // test-framework artifacts use the same property
    }
    ```
 
-3. **Prove both in CI.** Run the build matrix over the supported versions (`-Pkotlin.compiler=2.3.21` and `-Pkotlin.compiler=2.4.0`). See the "CI matrix" section below for the full workflow — Strategy 0 *is* that matrix applied to a single source set.
+3. **Prove both in CI.** Run the build matrix over the supported versions (`-Pkotlin.compiler=2.3.21` and `-Pkotlin.compiler=2.4.10`). See the "CI matrix" section below for the full workflow — Strategy 0 *is* that matrix applied to a single source set.
 
 Pros: zero per-version source, no reflection, trivial to maintain. Cons: only works while the two versions' relevant API actually overlaps — once a needed API exists in only one minor, escalate to Strategy 2/3/4. Distribution is usually a single JAR validated against both (shape A), or one coordinate per version (shape B) if you publish.
 
@@ -71,7 +71,7 @@ The default for supporting a **single** Kotlin version. `plugin/build.gradle.kts
 
 ```kotlin
 dependencies {
-    compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.4.0")
+    compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.4.10")
 }
 ```
 
@@ -407,13 +407,13 @@ The canonical workaround is to fall back to the **legacy `buildscript {}` block 
 buildscript {
     repositories { mavenCentral() }
     dependencies {
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.0")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.10")
     }
 }
 apply(plugin = "org.jetbrains.kotlin.jvm")
 
 dependencies {
-    compileOnly("org.jetbrains.kotlin:kotlin-compiler:2.4.0")
+    compileOnly("org.jetbrains.kotlin:kotlin-compiler:2.4.10")
 }
 ```
 
@@ -439,7 +439,7 @@ Run your build matrix against every Kotlin version you claim to support. Both Me
 # .github/workflows/ci.yml
 strategy:
   matrix:
-    kotlin: [2.1.21, 2.2.20, 2.2.21, 2.3.0, 2.3.20, 2.3.21, 2.4.0]
+    kotlin: [2.1.21, 2.2.20, 2.2.21, 2.3.0, 2.3.20, 2.3.21, 2.4.0, 2.4.10]
 steps:
   - run: ./gradlew test -Pkotlin.compiler=${{ matrix.kotlin }}
 ```
@@ -447,7 +447,7 @@ steps:
 In Gradle:
 
 ```kotlin
-val kotlinVersion = providers.gradleProperty("kotlin.compiler").orElse("2.4.0")
+val kotlinVersion = providers.gradleProperty("kotlin.compiler").orElse("2.4.10")
 dependencies {
     compileOnly("org.jetbrains.kotlin:kotlin-compiler:${kotlinVersion.get()}")
 }
@@ -467,7 +467,7 @@ Cap the matrix:
 
 ### Per-subproject `kotlin-compiler` mismatch with consumer's compiler
 
-Your plugin's `compileOnly("...kotlin-compiler:2.4.0")` doesn't pin the consumer's Kotlin version. The consumer can be on 2.2 or 2.4. If APIs you reference don't exist in their version, you get `NoSuchMethodError` at their compile time. Either use only APIs stable across the supported range, ship per-version artifacts, or ship a compat shim (Strategy 4).
+Your plugin's `compileOnly("...kotlin-compiler:2.4.10")` doesn't pin the consumer's Kotlin version. The consumer can be on 2.2 or 2.4. If APIs you reference don't exist in their version, you get `NoSuchMethodError` at their compile time. Either use only APIs stable across the supported range, ship per-version artifacts, or ship a compat shim (Strategy 4).
 
 ### `KotlinCompilerVersion.VERSION` returns `@snapshot@`
 

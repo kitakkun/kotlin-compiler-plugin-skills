@@ -1,6 +1,6 @@
 # Evidence Dossier: multi-version-kotlin-support
 
-References to the JetBrains Kotlin source tree use `kotlin/<path>` notation against tag `v2.4.0` unless noted. References to community plugins (Metro, kotlinx-rpc) are pinned to the SHAs listed at the bottom.
+References to the JetBrains Kotlin source tree use `kotlin/<path>` notation against tag `v2.4.10` unless noted. References to community plugins (Metro, kotlinx-rpc) are pinned to the SHAs listed at the bottom.
 
 All quoted snippets below originate from projects under the **Apache License 2.0**:
 
@@ -14,7 +14,7 @@ Original copyright applies to each snippet. See [`../../NOTICE.md`](../../NOTICE
 
 ### Claim: `KotlinCompilerVersion.VERSION` is the canonical runtime hook for detecting the active Kotlin compiler version.
 
-**File**: [`kotlin/compiler/compiler.version/src/org/jetbrains/kotlin/config/KotlinCompilerVersion.java:16`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/compiler.version/src/org/jetbrains/kotlin/config/KotlinCompilerVersion.java#L16)
+**File**: [`kotlin/compiler/compiler.version/src/org/jetbrains/kotlin/config/KotlinCompilerVersion.java:16`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/compiler.version/src/org/jetbrains/kotlin/config/KotlinCompilerVersion.java#L16)
 
 **Snippet**:
 ```java
@@ -28,7 +28,7 @@ The `VERSION` field is populated from `/META-INF/compiler.version` packaged in `
 
 ### Claim: `CompilerPluginRegistrar.pluginId` is an abstract `val` since Kotlin 2.3, breaking plugins built against 2.2.x without overriding it.
 
-**File**: [`kotlin/compiler/plugin-api/src/org/jetbrains/kotlin/compiler/plugin/CompilerPluginRegistrar.kt:23`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/plugin-api/src/org/jetbrains/kotlin/compiler/plugin/CompilerPluginRegistrar.kt#L23)
+**File**: [`kotlin/compiler/plugin-api/src/org/jetbrains/kotlin/compiler/plugin/CompilerPluginRegistrar.kt:23`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/plugin-api/src/org/jetbrains/kotlin/compiler/plugin/CompilerPluginRegistrar.kt#L23)
 
 **Snippet**:
 ```kotlin
@@ -40,12 +40,12 @@ Introduced via commit `1180951a80f6` ("[Plugins] Require a unique pluginId for a
 
 ### Claim: Kotlin 2.2 unified IR member-access argument layout via KT-68003 — `arguments` replaces the separate `dispatchReceiver` / `extensionReceiver` / `valueArguments` slots.
 
-**File**: [`kotlin/docs/backend/IR_parameter_api_migration.md:5`](https://github.com/JetBrains/kotlin/blob/v2.4.0/docs/backend/IR_parameter_api_migration.md#L5)
+**File**: [`kotlin/docs/backend/IR_parameter_api_migration.md:5`](https://github.com/JetBrains/kotlin/blob/v2.4.10/docs/backend/IR_parameter_api_migration.md#L5)
 
 **Snippet**:
 > "It has been refactored how value parameters in `IrFunction` and value arguments in `IrMemberAccessExpression` are represented (KT-68003). The old API is deprecated and scheduled for removal somewhere around Kotlin 2.2.20 or 2.3."
 
-**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/expressions/IrMemberAccessExpression.kt:43`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/expressions/IrMemberAccessExpression.kt#L43)
+**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/expressions/IrMemberAccessExpression.kt:43`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/expressions/IrMemberAccessExpression.kt#L43)
 
 **Snippet**:
 ```kotlin
@@ -56,7 +56,7 @@ val arguments: ValueArgumentsList = ValueArgumentsList()
 
 ### Claim: `KotlinCompilerVersion.VERSION` returns the literal string `@snapshot@` for development builds and must be guarded before parsing.
 
-**File**: [`kotlin/compiler/compiler.version/src/org/jetbrains/kotlin/config/KotlinCompilerVersion.java:40`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/compiler.version/src/org/jetbrains/kotlin/config/KotlinCompilerVersion.java#L40)
+**File**: [`kotlin/compiler/compiler.version/src/org/jetbrains/kotlin/config/KotlinCompilerVersion.java:40`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/compiler.version/src/org/jetbrains/kotlin/config/KotlinCompilerVersion.java#L40)
 
 **Snippet**:
 ```java
@@ -69,9 +69,9 @@ public static String getVersion() {
 
 ### Claim: JetBrains' own production plugins use multi-source-set splits — but the split is by ROLE, not by Kotlin minor version.
 
-**Path**: [`kotlin/plugins/parcelize/parcelize-compiler/`](https://github.com/JetBrains/kotlin/tree/v2.4.0/plugins/parcelize/parcelize-compiler)
+**Path**: [`kotlin/plugins/parcelize/parcelize-compiler/`](https://github.com/JetBrains/kotlin/tree/v2.4.10/plugins/parcelize/parcelize-compiler)
 
-Subdirectories at v2.4.0: `parcelize.cli`, `parcelize.common`, `parcelize.k1`, `parcelize.k2`, `parcelize.backend`, `testData`, `testFixtures`, `tests` (parcelize dropped its separate `tests-gen/` in 2.4.0).
+Subdirectories at v2.4.10: `parcelize.cli`, `parcelize.common`, `parcelize.k1`, `parcelize.k2`, `parcelize.backend`, `testData`, `testFixtures`, `tests` (parcelize dropped its separate `tests-gen/` in 2.4.0).
 
 Neither parcelize nor `kotlin/plugins/kotlinx-serialization/` contain any directory like `parcelize.k2-2.2` / `parcelize.k2-2.3`. Each release of these plugins targets exactly one Kotlin compiler version, pinned by the `kotlin-lang` repo's branch.
 
@@ -79,7 +79,7 @@ Neither parcelize nor `kotlin/plugins/kotlinx-serialization/` contain any direct
 
 ### Claim: `KotlinCompilerPluginSupportPlugin.getPluginArtifact()` is the per-Kotlin-version selection hook on the Gradle plugin side.
 
-**File**: [`kotlin/libraries/tools/kotlin-gradle-plugin-api/src/common/kotlin/org/jetbrains/kotlin/gradle/plugin/KotlinGradleSubplugin.kt:234`](https://github.com/JetBrains/kotlin/blob/v2.4.0/libraries/tools/kotlin-gradle-plugin-api/src/common/kotlin/org/jetbrains/kotlin/gradle/plugin/KotlinGradleSubplugin.kt#L234)
+**File**: [`kotlin/libraries/tools/kotlin-gradle-plugin-api/src/common/kotlin/org/jetbrains/kotlin/gradle/plugin/KotlinGradleSubplugin.kt:234`](https://github.com/JetBrains/kotlin/blob/v2.4.10/libraries/tools/kotlin-gradle-plugin-api/src/common/kotlin/org/jetbrains/kotlin/gradle/plugin/KotlinGradleSubplugin.kt#L234)
 
 **Snippet**:
 ```kotlin
@@ -88,7 +88,7 @@ fun getPluginArtifact(): SubpluginArtifact
 
 Surrounding doc: "Retrieves the Maven coordinates of the Kotlin compiler plugin associated with this supplemental Gradle plugin. The Kotlin Gradle plugin adds this artifact to the relevant Gradle configurations so it can be automatically provided for compilation."
 
-`SubpluginArtifact` is declared further down at [`KotlinGradleSubplugin.kt:247`](https://github.com/JetBrains/kotlin/blob/v2.4.0/libraries/tools/kotlin-gradle-plugin-api/src/common/kotlin/org/jetbrains/kotlin/gradle/plugin/KotlinGradleSubplugin.kt#L247) as an `open class` (not a `data class`):
+`SubpluginArtifact` is declared further down at [`KotlinGradleSubplugin.kt:247`](https://github.com/JetBrains/kotlin/blob/v2.4.10/libraries/tools/kotlin-gradle-plugin-api/src/common/kotlin/org/jetbrains/kotlin/gradle/plugin/KotlinGradleSubplugin.kt#L247) as an `open class` (not a `data class`):
 ```kotlin
 open class SubpluginArtifact(val groupId: String, val artifactId: String, val version: String? = null)
 ```

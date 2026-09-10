@@ -7,7 +7,7 @@ description: Inject implicit extension receivers into specific function-call res
 
 The K2 extension point that **adds implicit extension receivers** during call resolution. When a user writes `foo()` inside some context (e.g. inside a specific DSL block or annotated function), this extension lets the plugin claim "there's an additional implicit receiver of type `T` in scope here" — so `foo()` resolves to `T.foo()` even though the user didn't write the receiver.
 
-Source: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirExpressionResolutionExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirExpressionResolutionExtension.kt).
+Source: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirExpressionResolutionExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirExpressionResolutionExtension.kt).
 
 ## API surface
 

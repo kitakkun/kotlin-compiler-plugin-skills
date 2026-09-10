@@ -7,7 +7,7 @@ description: Scaffold a new Kotlin compiler plugin project from scratch — mult
 
 This skill produces a working **multi-module Gradle project** containing a Kotlin compiler plugin and a sample module that consumes it. The plugin loads, runs during compilation, and can observe or transform IR.
 
-A related working example lives at `skills/compiler-plugin-bootstrap/example/` (`hello-plugin`), pinned to Kotlin 2.4.0. It demonstrates the same module layout and `META-INF/services` wiring but uses simpler `println` / file I/O for plugin-side logging instead of the `MessageCollector` pattern shown in this skill — treat it as a structural reference, not as a verbatim companion to the text below. The instructions below are self-contained.
+A related working example lives at `skills/compiler-plugin-bootstrap/example/` (`hello-plugin`), pinned to Kotlin 2.4.10. It demonstrates the same module layout and `META-INF/services` wiring but uses simpler `println` / file I/O for plugin-side logging instead of the `MessageCollector` pattern shown in this skill — treat it as a structural reference, not as a verbatim companion to the text below. The instructions below are self-contained.
 
 ## Conceptual primer
 
@@ -69,12 +69,12 @@ The Foojay Toolchain Resolver lets Gradle download the JDK declared by `jvmToolc
 ```properties
 # Optional: only needed if your default JDK is Java 22 or newer.
 #
-# Workaround for Kotlin BTAPI / JDK 25 (verified on 2.3.20, 2.3.21, and 2.4.0):
+# Workaround for Kotlin BTAPI / JDK 25 (verified on 2.3.20, 2.3.21, 2.4.0, and 2.4.10):
 # it bundles a Kotlin compiler that fails to parse Java 25's version
 # string ("25.0.2"). On macOS hosts where Homebrew's `openjdk` formula
 # now ships Java 25 as the system default, pinning the launcher to
 # JDK 21 avoids `IllegalArgumentException: 25.0.2` from
-# `JavaVersion.parse`. Still present in Kotlin 2.4.0 (bundled IntelliJ
+# `JavaVersion.parse`. Still present in Kotlin 2.4.10 (bundled IntelliJ
 # `JavaVersion` unchanged from 2.3.x) — keep this pin.
 #
 # Skip this entire file if `gradle --version` already reports a Launcher
@@ -121,7 +121,7 @@ local.properties
 
 ```kotlin
 plugins {
-    kotlin("jvm") version "2.4.0"  // pick the latest 2.3.x at the time you start
+    kotlin("jvm") version "2.4.10"  // pick the latest 2.4.x at the time you start
 }
 
 kotlin {
@@ -129,7 +129,7 @@ kotlin {
 }
 
 dependencies {
-    compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.4.0")
+    compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.4.10")
 }
 ```
 
@@ -326,7 +326,7 @@ For an experimentation harness, depend on the plugin JAR via a custom configurat
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "2.4.0"
+    kotlin("jvm") version "2.4.10"
     application
 }
 
@@ -413,7 +413,7 @@ You're missing `override val pluginId: String = ...` on either `CompilerPluginRe
 
 ### `IllegalArgumentException: 25.0.2` from `JavaVersion.parse`
 
-The Gradle launcher is running on Java 25, but the bundled Kotlin compiler in your Gradle distribution can't parse that version string. See the `gradle.properties` section above — pin `org.gradle.java.home` to JDK 21. Tracked as a Kotlin BTAPI issue — still present in 2.4.0 (the bundled IntelliJ `JavaVersion` is unchanged: `versions.intellijSdk=251.27812.49` in both 2.3.21 and 2.4.0).
+The Gradle launcher is running on Java 25, but the bundled Kotlin compiler in your Gradle distribution can't parse that version string. See the `gradle.properties` section above — pin `org.gradle.java.home` to JDK 21. Tracked as a Kotlin BTAPI issue — still present in 2.4.10 (the bundled IntelliJ `JavaVersion` is unchanged: `versions.intellijSdk=251.27812.49` in 2.3.21, 2.4.0, and 2.4.10).
 
 ### Plugin compiles, build succeeds, but no `w:` line from `generate(...)`
 
@@ -448,7 +448,7 @@ Some IR APIs additionally require `@OptIn(UnsafeDuringIrConstructionAPI::class)`
 
 ### Version mismatch between plugin and consumer
 
-The `kotlin-compiler-embeddable` version used by the plugin must match the Kotlin version that compiles the consumer. If the consumer compiles with Kotlin 2.4.0, the plugin must depend on `kotlin-compiler-embeddable:2.4.0`. Mismatches cause `NoSuchMethodError` or `LinkageError` at the consumer's compile time — see [`multi-version-kotlin-support`](../multi-version-kotlin-support/guide.md) for strategies if you need to support multiple Kotlin versions.
+The `kotlin-compiler-embeddable` version used by the plugin must match the Kotlin version that compiles the consumer. If the consumer compiles with Kotlin 2.4.10, the plugin must depend on `kotlin-compiler-embeddable:2.4.10`. Mismatches cause `NoSuchMethodError` or `LinkageError` at the consumer's compile time — see [`multi-version-kotlin-support`](../multi-version-kotlin-support/guide.md) for strategies if you need to support multiple Kotlin versions.
 
 ### Wrong artifact
 
