@@ -8,9 +8,9 @@ description: Build entirely new IR classes (with members, supertypes, and constr
 Two scenarios call for IR-side class synthesis:
 
 1. **FIR-paired** — `FirDeclarationGenerationExtension` declared a class; the IR side fills in member bodies and possibly synthesises companion methods. Source-visible from the same module; metadata-visible to downstream modules. This is the dominant pattern; see `kotlin/plugins/kotlinx-serialization/`, `kotlin/plugins/parcelize/`, and `kotlin/plugins/atomicfu/` for production references.
-2. **IR-only** — the entire class doesn't exist at the FIR level; the IR plugin invents it during its `generate(...)` pass. Source-invisible from the same module (FIR has no record of it) but the bytecode is real. Used when a plugin needs runtime helpers that user code never refers to directly — e.g. injected book-keeping types or compiler-internal trampolines.
+2. **IR-only** — the entire class doesn't exist at the FIR level; the IR plugin invents it during its `generate(...)` pass. Source-invisible *within the defining module* (its FIR has no record of it) but the bytecode is real — and since Kotlin 2.4.20 a single `registerClassAsMetadataVisible` call (step 6) makes the class, its constructor, properties, functions, and nested classes resolvable from downstream modules' source and IDE exactly like a library class. Used when a plugin needs runtime helpers that user code never refers to directly — e.g. injected book-keeping types or compiler-internal trampolines — or when the consumer is always another module.
 
-Pattern 1 is much more common. Pattern 2 has more limitations (no source visibility, no IDE awareness, no checker support).
+Pattern 1 is much more common. Pattern 2 has more limitations: inside the defining module there is no source visibility, no IDE awareness, and no checker support, and on Kotlin 2.4.10 and older that is also true for every other module. On 2.4.20+ downstream modules see the class once it is registered as metadata-visible; only the module that generates it never does.
 
 ## FIR-paired pattern (recommended)
 
@@ -64,12 +64,17 @@ val newClass = factory.buildClass {
 
 ### 2. Add a constructor
 
+**Order note:** if the constructor initializes a field — the normal shape for a holder / data-carrier class — build the property and its backing field (step 3) *before* the constructor, because the constructor body references the `IrField`. The snippet below assumes `nameField` from step 3 already exists; for a no-arg class drop the `addValueParameter` and `irSetField` lines.
+
 ```kotlin
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.ir.util.constructors            // exposes IrClass.constructors as a Sequence
 import org.jetbrains.kotlin.ir.builders.declarations.addConstructor
+import org.jetbrains.kotlin.ir.builders.declarations.addValueParameter
 import org.jetbrains.kotlin.ir.builders.irBlockBody
 import org.jetbrains.kotlin.ir.builders.irDelegatingConstructorCall
+import org.jetbrains.kotlin.ir.builders.irGet
+import org.jetbrains.kotlin.ir.builders.irSetField
 import org.jetbrains.kotlin.ir.expressions.impl.IrInstanceInitializerCallImpl
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 
@@ -79,6 +84,7 @@ val ctor = newClass.addConstructor {
     visibility = DescriptorVisibilities.PUBLIC
     // returnType is auto-set to newClass.defaultType by addConstructor — no need to set explicitly
 }.apply {
+    val nameParam = addValueParameter("name", pluginContext.irBuiltIns.stringType)
     val builder = DeclarationIrBuilder(pluginContext, symbol)
     body = builder.irBlockBody {
         +irDelegatingConstructorCall(pluginContext.irBuiltIns.anyClass.owner.constructors.single())
@@ -87,40 +93,49 @@ val ctor = newClass.addConstructor {
             type = pluginContext.irBuiltIns.unitType,
             classSymbol = newClass.symbol,
         )
+        // Assign the constructor parameter to the backing field built in step 3.
+        +irSetField(irGet(newClass.thisReceiver!!), nameField, irGet(nameParam))
     }
 }
 ```
 
-`addConstructor { ... }` extends `IrClass` (in `org.jetbrains.kotlin.ir.builders.declarations`). The body must call the superclass constructor (`irDelegatingConstructorCall`) and then run the instance initialiser. Reading `anyClass.owner` is gated by `@OptIn(UnsafeDuringIrConstructionAPI::class)` (as annotated above; the same opt-in is documented in [`ir-plugincontext-usage`](../ir-plugincontext-usage/guide.md)).
+`addConstructor { ... }` and `addValueParameter(name, type)` extend `IrClass` / `IrFunction` (both in `org.jetbrains.kotlin.ir.builders.declarations`); `irSetField(receiver, field, value)` and `irGet(value)` are `IrBuilder` extensions in `org.jetbrains.kotlin.ir.builders`. The body must call the superclass constructor (`irDelegatingConstructorCall`) and then run the instance initialiser. Reading `anyClass.owner` is gated by `@OptIn(UnsafeDuringIrConstructionAPI::class)` (as annotated above; the same opt-in is documented in [`ir-plugincontext-usage`](../ir-plugincontext-usage/guide.md)).
 
 ### 3. Add fields
 
 ```kotlin
-val nameField = newClass.addProperty {
+import org.jetbrains.kotlin.ir.builders.declarations.addBackingField
+import org.jetbrains.kotlin.ir.builders.declarations.addDefaultGetter
+import org.jetbrains.kotlin.ir.builders.declarations.addProperty
+
+val nameProperty = newClass.addProperty {
     name = Name.identifier("name")
     visibility = DescriptorVisibilities.PUBLIC
     modality = Modality.FINAL
-}.apply {
-    backingField = factory.buildField {
-        name = this@apply.name
-        type = pluginContext.irBuiltIns.stringType
-        visibility = DescriptorVisibilities.PRIVATE
-    }.apply { parent = newClass }
-    addDefaultGetter(newClass, pluginContext.irBuiltIns)
 }
+val nameField = nameProperty.addBackingField {
+    type = pluginContext.irBuiltIns.stringType
+    isFinal = true
+}
+nameProperty.addDefaultGetter(newClass, pluginContext.irBuiltIns)
 ```
 
-Properties typically need a backing field plus a getter (and a setter for `var`s). `addDefaultGetter` is a helper in `org.jetbrains.kotlin.ir.builders.declarations`.
+Properties typically need a backing field plus a getter (and a setter for `var`s). All three helpers live in `org.jetbrains.kotlin.ir.builders.declarations`. `addProperty` appends the property to `newClass.declarations` and sets its `parent`; `IrProperty.addBackingField { }` builds the field with the property's name, `origin = PROPERTY_BACKING_FIELD`, `visibility = PRIVATE`, sets `backingField`, `correspondingPropertySymbol`, and `parent` in one call (this is what upstream `plugin-sandbox`'s `GeneratedTopLevelClassIrGenerator` uses). Prefer it over a hand-built `factory.buildField { }` + manual `backingField =` / `parent =`, which compiles but silently skips `correspondingPropertySymbol` and the backing-field origin. `addDefaultGetter` reads `backingField!!`, so call it after `addBackingField`.
 
 ### 4. Add member functions
 
 ```kotlin
+import org.jetbrains.kotlin.ir.builders.declarations.addFunction
+import org.jetbrains.kotlin.ir.util.createDispatchReceiverParameterWithClassParent
+
 val toStringFn = newClass.addFunction {
     name = Name.identifier("toString")
     visibility = DescriptorVisibilities.PUBLIC
     modality = Modality.OPEN
     returnType = pluginContext.irBuiltIns.stringType
 }.apply {
+    // addFunction { } does NOT add the dispatch receiver — without this line the JVM method is static.
+    parameters = listOf(createDispatchReceiverParameterWithClassParent())
     overriddenSymbols = listOf(/* Any.toString symbol */)
     val builder = DeclarationIrBuilder(pluginContext, symbol)
     body = builder.irBlockBody {
@@ -129,7 +144,7 @@ val toStringFn = newClass.addFunction {
 }
 ```
 
-`addFunction { ... }` is also in `org.jetbrains.kotlin.ir.builders.declarations`.
+`addFunction { ... }` is also in `org.jetbrains.kotlin.ir.builders.declarations`; `createDispatchReceiverParameterWithClassParent()` is in `org.jetbrains.kotlin.ir.util`. The `parameters = ...` line is mandatory for every member function you build this way, on a brand-new class just as much as on an existing one — see the gotcha below.
 
 ### 5. Insert into a parent
 
@@ -171,6 +186,7 @@ Constraints of `registerClassAsMetadataVisible` (fir2ir implementation, `Fir2IrI
 - For an inner class the captured outer type parameters are re-derived from the enclosing chain, so set `parent` on every level before registering.
 - Sealed classes: `sealedSubclasses` is read at registration time, so populate it first.
 - Do not also call the per-member `register*AsMetadataVisible` on members of a class you registered as a whole — the class walk already did it.
+- The recursive walk only covers classes nested inside a class **you registered**. A generated class nested inside a *source-declared* outer (`sourceClass.declarations += nested`) must be registered with its own `registerClassAsMetadataVisible(nested)` call — the outer is never registered, so nothing walks into it. Upstream `plugin-sandbox` does exactly this for its "nested class inside a source-declared outer" case, and it was verified cross-module on 2.4.20 (`verification/14-cross-module-ir-class-visibility`).
 
 On Kotlin 2.4.10 and older (or when you only add a member to an *existing* class, see step 7), register **functions and constructors** individually — properties and whole classes could not be registered before 2.4.20:
 
@@ -275,7 +291,7 @@ A constructor must call its superclass constructor *and* invoke the instance ini
 
 Member functions implicitly take the dispatch receiver as their first parameter. The `createThisReceiverParameter()` method on `IrClass` sets this up. Forgetting it makes member calls fail with `dispatchReceiver is null`. (The older `createParameterDeclarations()` is deprecated since Kotlin 2.1.20 — replace any references in pre-2.1.20 tutorials.)
 
-### `IrClass.addFunction { ... }` produces a JVM-static method when adding to an existing class
+### `IrClass.addFunction { ... }` produces a JVM-static method unless you add the dispatch receiver
 
 The `addFunction { builder }` overload in `org.jetbrains.kotlin.ir.builders.declarations` does **not** add a dispatch receiver — the resulting `IrSimpleFunction` has no receiver parameter, so JVM codegen emits a `static` method on the enclosing class. If you also call `pluginContext.metadataDeclarationRegistrar.registerFunctionAsMetadataVisible(...)`, the metadata records it as a *member* function while the bytecode is *static* — downstream callers crash at runtime with `IncompatibleClassChangeError: Expected non-static method`.
 
@@ -295,7 +311,7 @@ val greet = ownerClass.addFunction {
 pluginContext.metadataDeclarationRegistrar.registerFunctionAsMetadataVisible(greet)
 ```
 
-kotlinx-serialization's `IrBuilderWithPluginContext` documents this inline. Member synthesis on existing classes should always set `parameters` explicitly.
+kotlinx-serialization's `IrBuilderWithPluginContext` documents this inline. This is a property of the `addFunction { }` overload, not of the target class: it applies identically to a class you just built in step 1 (where `registerClassAsMetadataVisible` would bake the member-vs-static mismatch into the metadata of every function) and to an existing class. Member synthesis should always set `parameters` explicitly.
 
 ### `returnType = X` set before parent → wrong type
 

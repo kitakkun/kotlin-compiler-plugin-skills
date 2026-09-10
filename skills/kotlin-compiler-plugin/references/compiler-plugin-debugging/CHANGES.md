@@ -25,7 +25,7 @@ override fun ExtensionStorage.registerExtensions(configuration: CompilerConfigur
 }
 ```
 
-**Migration**: add `@OptIn(MessageCollectorAccess::class)` at the use site (or `-opt-in=org.jetbrains.kotlin.config.MessageCollectorAccess` in the plugin module's compiler options). `IrPluginContext.messageCollector` is unaffected — it stays `@Deprecated(WARNING)` and needs only `@Suppress("DEPRECATION")`. Opt-in-free `CompilerConfiguration.reportInfo(...)` / `reportLog(...)` exist in `org.jetbrains.kotlin.cli`, but there is no warning-level wrapper.
+**Migration**: add `@OptIn(MessageCollectorAccess::class)` at the use site (or `-opt-in=org.jetbrains.kotlin.config.MessageCollectorAccess` in the plugin module's compiler options). `IrPluginContext.messageCollector` is unaffected — it stays `@Deprecated(WARNING)` and needs only `@Suppress("DEPRECATION")`. For a registrar-time `w:` line without the opt-in use `configuration.report(CliDiagnostics.COMPILER_PLUGIN_INITIALIZATION_WARNING, "...")` (`org.jetbrains.kotlin.cli.report` + `org.jetbrains.kotlin.cli.CliDiagnostics`); it is flushed via `diagnosticsCollector`, so it prints after direct collector output, and it is not available inside `generate(...)`. Opt-in-free `CompilerConfiguration.reportInfo(...)` lives in `org.jetbrains.kotlin.cli`; `reportLog(...)` is implemented in `org.jetbrains.kotlin.config` (`ReportingUtils.kt`) with a forwarding alias in `org.jetbrains.kotlin.cli`. There is no severity-named `reportWarning`.
 
 Upstream: `kotlin/compiler/config/gen/org/jetbrains/kotlin/config/CommonConfigurationKeys.kt:99-101,233-236`, `kotlin/compiler/config/src/org/jetbrains/kotlin/config/MessageCollectorAccess.kt:8-9` (commit `4dacc99b77f9`, KT-78277).
 

@@ -19,7 +19,7 @@ By default, Kotlin compilation runs in a separate daemon process. `in-process` r
 
 1. **Debugger attachment is simpler** — the compiler runs in the same JVM as Gradle, so a single `-agentlib:jdwp` flag on the Gradle JVM covers the compiler too (see section 7). Under daemon mode you have to attach to the Kotlin compile daemon separately via `kotlin.daemon.jvmargs`.
 2. **No classloader caching of the plugin JAR** — the daemon survives across Gradle invocations and pins the first version of your plugin's classes it loads; in-process compilation re-reads the JAR each Gradle build.
-3. **`MessageCollector` output for DEBUG-severity messages reliably appears** — the daemon path routes messages through `CompileServicesFacadeMessageCollector`, which applies a severity-threshold filter (`reportSeverity.code <= mySeverity`) where `mySeverity` defaults to `INFO (=2)`. WARNING (1) and ERROR (0) surface on both paths, but DEBUG (3) — i.e. `CompilerMessageSeverity.LOGGING` — is dropped on the daemon path. The in-process `GradlePrintingMessageCollector` has no threshold and renders every severity. (Since 2.4.20 the daemon collector also implements `MessageCollectorWithDiagnosticId`, which carries the diagnostic factory name across the daemon boundary, and honors `-Werror` itself by promoting WARNING to ERROR — neither changes which severities are visible.)
+3. **`MessageCollector` output for DEBUG-severity messages reliably appears** — the daemon path routes messages through `CompileServicesFacadeMessageCollector`, which applies a severity-threshold filter (`reportSeverity.code <= mySeverity`) where `mySeverity` defaults to `INFO (=2)`. WARNING (1) and ERROR (0) surface on both paths, but DEBUG (3) — i.e. `CompilerMessageSeverity.LOGGING` — is hidden on the daemon path unless Gradle itself runs with `--debug` (KGP raises the threshold to DEBUG only for a verbose compile; in a 2.4.20 probe with the default daemon strategy, `configuration.reportLog(...)` surfaced as a `v: ...` line under `gradlew --debug` and was absent otherwise). `INFO` prints as `i:` only under `--info`. The in-process `GradlePrintingMessageCollector` has no threshold and renders every severity. (Since 2.4.20 the daemon collector also implements `MessageCollectorWithDiagnosticId`, which carries the diagnostic factory name across the daemon boundary, and honors `-Werror` itself by promoting WARNING to ERROR — neither changes which severities are visible.)
 
 Slower for clean builds, but predictable. Recommended as the dev-loop default; switch back to daemon mode for CI / production builds.
 
@@ -44,9 +44,20 @@ override fun ExtensionStorage.registerExtensions(configuration: CompilerConfigur
 }
 ```
 
-`configuration.messageCollector` (from `org.jetbrains.kotlin.config`) is the same lookup with the `MessageCollector.NONE` fallback built in; it needs the same `@OptIn`. For INFO / LOGGING-level output without the opt-in, `org.jetbrains.kotlin.cli.reportInfo(...)` / `reportLog(...)` extension functions on `CompilerConfiguration` wrap the collector for you — but there is no opt-in-free wrapper for `WARNING`, so the collector itself remains the practical choice for visible plugin output.
+`configuration.messageCollector` (from `org.jetbrains.kotlin.config`) is the same lookup with the `MessageCollector.NONE` fallback built in; it needs the same `@OptIn` plus its own import, `import org.jetbrains.kotlin.config.messageCollector`.
 
-`WARNING` and above appear in Gradle's console as `w: ...` lines. `INFO` is suppressed unless you build with `--info`. `EXCEPTION` halts compilation. Use `LOGGING` for `--debug`-only messages.
+For a registrar-time `w:` line you do not need the collector at all. `org.jetbrains.kotlin.cli.report(factory, message)` — the API the opt-in message recommends — accepts any `KtSourcelessDiagnosticFactory`, and `org.jetbrains.kotlin.cli.CliDiagnostics` provides one for exactly this purpose:
+
+```kotlin
+import org.jetbrains.kotlin.cli.CliDiagnostics
+import org.jetbrains.kotlin.cli.report
+
+configuration.report(CliDiagnostics.COMPILER_PLUGIN_INITIALIZATION_WARNING, "MyPlugin: hello from registrar")
+```
+
+Caveats (verified on 2.4.20): the diagnostic goes through `diagnosticsCollector` and is flushed later, so it prints *after* anything written directly to the collector — including an IR-time `messageCollector.report(...)` issued long after the registrar ran; and it is registrar-time only, so an `IrGenerationExtension` that wants to log still needs a collector handle (with the opt-in), `pluginContext.diagnosticReporter`, or the deprecated `pluginContext.messageCollector` (section 2). For INFO / LOGGING output, `reportInfo(...)` (`org.jetbrains.kotlin.cli`) and `reportLog(...)` (`org.jetbrains.kotlin.config`; the `cli` one is a one-line alias for it) wrap the collector without an opt-in.
+
+`WARNING` and above appear in Gradle's console as `w: ...` lines. `INFO` (`reportInfo`) prints as `i: ...` only when you build with `--info`. `LOGGING` (`reportLog`) prints as `v: ...` only with `--debug`. `EXCEPTION` halts compilation.
 
 Pass the collector to your extension if you want IR-time logging from inside `generate(...)`.
 

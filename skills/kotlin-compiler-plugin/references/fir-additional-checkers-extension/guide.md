@@ -148,7 +148,7 @@ object MustBeFinalChecker : FirRegularClassChecker(MppCheckerKind.Common) {
 }
 ```
 
-Each `Fir*Checker` base class corresponds to a FIR node type. The most common ones live in `kotlin/compiler/fir/checkers/src/org/jetbrains/kotlin/fir/analysis/checkers/`:
+Each `Fir*Checker` base class corresponds to a FIR node type. The generic base `FirDeclarationChecker<D>` / `FirExpressionChecker<E>` live under `kotlin/compiler/fir/checkers/src/org/jetbrains/kotlin/fir/analysis/checkers/{declaration,expression}/`, but the per-node aliases below (`FirNamedFunctionChecker`, `FirRegularClassChecker`, ...) and the `DeclarationCheckers` / `ExpressionCheckers` buckets are **generated** into `kotlin/compiler/fir/checkers/gen/org/jetbrains/kotlin/fir/analysis/checkers/{declaration,expression}/` (`FirDeclarationCheckerAliases.kt`, `FirExpressionCheckerAliases.kt`, `DeclarationCheckers.kt`, `ExpressionCheckers.kt`) — look there, not under `src/`, when you need the exact alias name:
 
 | Base class | Triggered for | `check()` parameter type |
 |---|---|---|
@@ -237,10 +237,10 @@ The override **must** use the matching context-parameter form. A regular three-p
 Context parameters are a stable language feature since Kotlin 2.4.0 (`LanguageFeature.ContextParameters` has `sinceVersion = KOTLIN_2_4`), so the `context(context: CheckerContext, reporter: DiagnosticReporter)` override above compiles without any extra flag on the target version. If the plugin module still carries the flag from a 2.3.x-era build, the compiler reports it as redundant:
 
 ```
-w: ... "-Xcontext-parameters" has no effect: the feature is enabled by default since language version 2.4
+w: The argument '-Xcontext-parameters' is redundant for the current language version 2.4.
 ```
 
-Drop it from `build.gradle.kts`:
+(Exact 2.4.20 text, emitted through `CliDiagnostics.REDUNDANT_CLI_ARG`. Gradle's `-q` / `--quiet` log level hides `w:` lines, so if you build with `-q` you will not see it at all.) Drop it from `build.gradle.kts`:
 
 ```kotlin
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
@@ -462,6 +462,6 @@ val hasUserCompanion = (declaration as FirRegularClass).companionObjectSymbol !=
 ## What this skill does NOT cover
 
 - Predicate registration syntax in depth — see [`fir-predicate-system`](../fir-predicate-system/guide.md)
-- The full `Fir*Checker` base class catalogue — see `kotlin/compiler/fir/checkers/src/org/jetbrains/kotlin/fir/analysis/checkers/` for the live list
+- The full `Fir*Checker` alias catalogue — see the generated `kotlin/compiler/fir/checkers/gen/org/jetbrains/kotlin/fir/analysis/checkers/declaration/FirDeclarationCheckerAliases.kt` and `.../expression/FirExpressionCheckerAliases.kt` for the live list
 - IDE integration of diagnostics (Analysis API for in-IDE highlighting) — see Kotlin's official docs
 - Suppressing existing built-in diagnostics — that requires a different mechanism (`FirSuppressionExtension`-like, not currently exposed publicly)

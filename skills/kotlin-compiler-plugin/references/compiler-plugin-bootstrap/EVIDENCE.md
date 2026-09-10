@@ -82,7 +82,50 @@ Source citations against `/Users/kitakkun/Documents/GitHub/kotlin-lang/`. Paths 
   annotation class MessageCollectorAccess
   ```
 - **Verification (git)**: `git log --oneline v2.4.10..v2.4.20 -- compiler/config/gen/org/jetbrains/kotlin/config/CommonConfigurationKeys.kt` includes `4dacc99b77f9 [CLI] Add opt-in to CompilerConfiguration.messageCollector` (KT-78277); `git tag --contains 4dacc99b77f9` lists `v2.4.20` but not `v2.4.10`.
-- **Suggested alternative named in the opt-in message**: the compiler's own `CompilerConfiguration.report*` helpers live in [`kotlin/compiler/cli/cli-base/src/org/jetbrains/kotlin/cli/CliDiagnosticReporting.kt:26-62`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/cli/cli-base/src/org/jetbrains/kotlin/cli/CliDiagnosticReporting.kt#L26-L62) (`report(factory: KtSourcelessDiagnosticFactory, ...)`, `reportInfo`, `reportLog`, `reportOutput`, `reportException`); `reportInfo`/`reportOutput`/`reportException` are themselves `@OptIn(MessageCollectorAccess::class)` wrappers around `messageCollector.report(...)`. There is no `reportWarning` helper, so a plugin that wants a `w:` line still needs the opt-in.
+- **Suggested alternative named in the opt-in message**: the compiler's own `CompilerConfiguration.report*` helpers live in [`kotlin/compiler/cli/cli-base/src/org/jetbrains/kotlin/cli/CliDiagnosticReporting.kt:26-62`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/cli/cli-base/src/org/jetbrains/kotlin/cli/CliDiagnosticReporting.kt#L26-L62) (`report(factory: KtSourcelessDiagnosticFactory, ...)`, `reportInfo`, `reportLog`, `reportOutput`, `reportException`); `reportInfo`/`reportOutput`/`reportException` are themselves `@OptIn(MessageCollectorAccess::class)` wrappers around `messageCollector.report(...)`. There is no `reportWarning` helper, but `report(factory, message)` with a ready-made factory from `CliDiagnostics` gives a `w:` line without the opt-in — see the next claim.
+
+### Claim: `configuration.report(CliDiagnostics.COMPILER_PLUGIN_INITIALIZATION_WARNING, "...")` prints a `w:` line from a registrar with no opt-in; it is flushed through `diagnosticsCollector` (so it appears after direct `messageCollector.report` output) and is registrar-time only.
+- **File**: [`kotlin/compiler/cli/cli-base/src/org/jetbrains/kotlin/cli/CliDiagnostics.kt:29-30`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/cli/cli-base/src/org/jetbrains/kotlin/cli/CliDiagnostics.kt#L29-L30)
+- **Snippet**:
+  ```kotlin
+  val COMPILER_PLUGIN_INITIALIZATION_WARNING: KtSourcelessDiagnosticFactory by strongWarningWithoutSource()
+  val COMPILER_PLUGIN_INITIALIZATION_ERROR: KtSourcelessDiagnosticFactory by errorWithoutSource()
+  ```
+- **File**: [`kotlin/compiler/cli/cli-base/src/org/jetbrains/kotlin/cli/CliDiagnosticReporting.kt:26-43`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/cli/cli-base/src/org/jetbrains/kotlin/cli/CliDiagnosticReporting.kt#L26-L43)
+- **Snippet**:
+  ```kotlin
+  fun CompilerConfiguration.report(
+      factory: KtSourcelessDiagnosticFactory,
+      message: String,
+      location: CompilerMessageSourceLocation? = null,
+  ) {
+      ...
+      context(context) {
+          diagnosticsCollector.report(factory, message, location)
+      }
+  }
+  ```
+- **Notes**: `report(...)` carries no `@OptIn(MessageCollectorAccess::class)` (contrast `reportInfo` at `:45-48`), and writes to `diagnosticsCollector` (`:41`), not to the message collector — hence the delayed flush. `CliDiagnostics.kt:64-69` maps every factory to `MESSAGE_PLACEHOLDER`, so the message string is printed verbatim. Verified end-to-end in `verification/15-message-collector-access` (Kotlin 2.4.20, KGP daemon strategy): the line rendered as `w: ...` at the default Gradle log level and printed after an IR-time `messageCollector.report(WARNING, ...)` that was called later.
+
+### Claim: `org.jetbrains.kotlin.cli.reportLog` is a one-line alias for `org.jetbrains.kotlin.config.reportLog`.
+- **File**: [`kotlin/compiler/cli/cli-base/src/org/jetbrains/kotlin/cli/CliDiagnosticReporting.kt:20`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/cli/cli-base/src/org/jetbrains/kotlin/cli/CliDiagnosticReporting.kt#L20) and [`:50-52`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/cli/cli-base/src/org/jetbrains/kotlin/cli/CliDiagnosticReporting.kt#L50-L52)
+- **Snippet**:
+  ```kotlin
+  import org.jetbrains.kotlin.config.reportLog as reportLogAlias
+  ...
+  fun CompilerConfiguration.reportLog(message: String, location: CompilerMessageSourceLocation? = null) {
+      reportLogAlias(message, location)
+  }
+  ```
+- **File**: [`kotlin/compiler/config/src/org/jetbrains/kotlin/config/ReportingUtils.kt:11-14`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/config/src/org/jetbrains/kotlin/config/ReportingUtils.kt#L11-L14)
+- **Snippet**:
+  ```kotlin
+  @OptIn(MessageCollectorAccess::class)
+  fun CompilerConfiguration.reportLog(message: String, location: CompilerMessageSourceLocation? = null) {
+      messageCollector.report(CompilerMessageSeverity.LOGGING, message, location)
+  }
+  ```
+- **Notes**: the `config` version is the real implementation; the `cli` one only forwards. Either is opt-in-free for the caller. `CliDiagnosticReporting.kt:19` also shows the import a plugin needs for the accessor form: `import org.jetbrains.kotlin.config.messageCollector`.
 
 ### Claim: The standard fallback when retrieving it is `MessageCollector.NONE` (the `messageCollector` accessor carries the same opt-in).
 - **File**: [`kotlin/compiler/config/gen/org/jetbrains/kotlin/config/CommonConfigurationKeys.kt:233-236`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/config/gen/org/jetbrains/kotlin/config/CommonConfigurationKeys.kt#L233-L236)

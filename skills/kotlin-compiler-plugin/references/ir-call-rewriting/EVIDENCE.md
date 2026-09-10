@@ -258,7 +258,39 @@ inline fun <reified T> IrAnnotation.getConstArgument(name: String): T? {
 }
 ```
 
+**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/util/IrUtils.kt:348-362`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/util/IrUtils.kt#L348-L362)
+
+**Snippet** (the lookup helpers used by the guide's "Reading annotation arguments" snippet):
+```kotlin
+fun IrAnnotation.isAnnotation(classId: ClassId): Boolean = isAnnotationWithEqualFqName(classId.asSingleFqName())   // :348
+fun IrAnnotation.isAnnotation(name: FqName): Boolean = isAnnotationWithEqualFqName(name)                            // :351
+fun IrAnnotationContainer.getAnnotation(name: FqName): IrAnnotation? =                                               // :353
+fun IrAnnotationContainer.hasAnnotation(name: FqName): Boolean = annotations.hasAnnotation(name)                    // :357
+fun IrAnnotationContainer.hasAnnotation(classId: ClassId): Boolean = annotations.hasAnnotation(classId)             // :360
+fun IrAnnotationContainer.hasAnnotation(symbol: IrClassSymbol) =                                                     // :362
+```
+
+All are top-level in `org.jetbrains.kotlin.ir.util` and must be imported individually. Verified end-to-end in `verification/16-ir-annotation-arguments` on 2.4.20: `getConstArgument<String>("name")`, `getAnnotationArgumentValue<Int>(fqName, "times")`, `argumentMapping[Name.identifier(...)] as? IrConst`, `isAnnotation(ClassId)`, `hasAnnotation(ClassId)`, `hasAnnotation(IrClassSymbol)` and `classSymbol` all resolved and returned the expected values.
+
 At v2.4.10 the removed helpers sat at `IrUtils.kt:351, 353, 358, 392`; `git diff v2.4.10 v2.4.20 -- compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/util/IrUtils.kt` shows them deleted with no deprecation cycle. `IrAnnotation.argumentMapping: Map<Name, IrExpression?>` is declared on the generated tree node at [`IrAnnotation.kt:24`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/expressions/IrAnnotation.kt#L24); the same generated file adds `classSymbol: IrClassSymbol` (line 22) and marks `IrAnnotation.symbol` (the constructor symbol) `@DeprecatedCompilerApi(deprecatedSince = _2_4_20)` (lines 26-27).
+
+---
+
+### Claim: `@DeprecatedCompilerApi` is a `@RequiresOptIn(level = WARNING)` marker, not `kotlin.Deprecated`; the resulting warning text is `This compiler API is deprecated` and `@Suppress("DEPRECATION")` does not silence it.
+
+**File**: [`kotlin/compiler/util/src/org/jetbrains/kotlin/DeprecatedCompilerApi.kt:38-43`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/util/src/org/jetbrains/kotlin/DeprecatedCompilerApi.kt#L38-L43)
+
+**Snippet**:
+```kotlin
+@RequiresOptIn(message = "This compiler API is deprecated", level = RequiresOptIn.Level.WARNING)
+annotation class DeprecatedCompilerApi(
+    val deprecatedSince: CompilerVersionOfApiDeprecation,
+    val message: String = "",
+    val replaceWith: String = "",
+)
+```
+
+The KDoc at `:29-31` states the reason ("We don't simply use @Deprecated annotation because of how our build and infrastructure are configured"). Because it is an opt-in marker, the fix is `@OptIn(DeprecatedCompilerApi::class)` (or `-opt-in=org.jetbrains.kotlin.DeprecatedCompilerApi`) rather than `@Suppress("DEPRECATION")`. Observed in `verification/16-ir-annotation-arguments` on 2.4.20: reading `annotation.symbol` printed `w: ... This compiler API is deprecated`; reading `annotation.classSymbol.owner` printed `w: This declaration needs opt-in. Its usage should be marked with '@org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI' ...`, while comparing `classSymbol` to `finderForSource(file).findClass(classId)` was warning-free.
 
 ---
 

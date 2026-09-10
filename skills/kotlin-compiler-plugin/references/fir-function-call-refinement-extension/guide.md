@@ -1,6 +1,6 @@
 ---
 name: fir-function-call-refinement-extension
-description: Refine the return type of a resolved function call at the call site by generating local declarations (typically a local class encoding inferred information from arguments) — the data-frame schema-inference pattern. Covers FirFunctionCallRefinementExtension, the intercept/transform two-phase API, the run/let scope-wrapping codegen pattern, the @FirExtensionApiInternals stability gate, the IR-codegen incompleteness, and why you almost certainly do not want to use this. Read fir-extensions-overview, fir-predicate-system, and fir-additional-checkers-extension first. If the user references `KtFakeSourceElementKind.PluginGenerated` as a value (it became a sealed class in Kotlin 2.4.20) or hits `FirDistinctSourceElementsHandler` failures in diagnostic tests, ALSO Read CHANGES.md in this skill's directory. NOT a general "rewrite this call" hook (it can only refine the return type, not the callee or arguments).
+description: Refine the return type of a resolved function call at the call site by generating local declarations (typically a local class encoding inferred information from arguments) — the data-frame schema-inference pattern. Covers FirFunctionCallRefinementExtension, the intercept/transform two-phase API, the run/let scope-wrapping codegen pattern, the companion FirDeclarationGenerationExtension that must supply the generated local class's constructor (hand-built `declarations` on a plugin-origin class are invisible to fir2ir and crash with an NPE in `ClassMemberGenerator.convertClassContent`), the @FirExtensionApiInternals stability gate, and why you almost certainly do not want to use this. Read fir-extensions-overview, fir-predicate-system, and fir-additional-checkers-extension first. If the user references `KtFakeSourceElementKind.PluginGenerated` as a value (it became a sealed class in Kotlin 2.4.20) or hits `FirDistinctSourceElementsHandler` failures in diagnostic tests, ALSO Read CHANGES.md in this skill's directory. NOT a general "rewrite this call" hook (it can only refine the return type, not the callee or arguments).
 ---
 
 # FirFunctionCallRefinementExtension
@@ -12,6 +12,8 @@ The motivating use case is **`kotlinx.dataframe`**: when the user writes `df.add
 Source: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirFunctionCallRefinementExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirFunctionCallRefinementExtension.kt). Reference impls:
 - [`kotlin/plugins/plugin-sandbox/src/org/jetbrains/kotlin/plugin/sandbox/fir/DataFrameLikeCallsRefinementExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.20/plugins/plugin-sandbox/src/org/jetbrains/kotlin/plugin/sandbox/fir/DataFrameLikeCallsRefinementExtension.kt) (sandbox prototype)
 - [`kotlin/plugins/kotlin-dataframe/kotlin-dataframe.k2/src/org/jetbrains/kotlinx/dataframe/plugin/extensions/FunctionCallTransformer.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.20/plugins/kotlin-dataframe/kotlin-dataframe.k2/src/org/jetbrains/kotlinx/dataframe/plugin/extensions/FunctionCallTransformer.kt) (production)
+
+Neither reference works alone. Each is paired with a `FirDeclarationGenerationExtension` that supplies the constructor (and properties) of the local classes the refinement extension creates — `DataFrameLikeTypeMembersGenerator.kt` next to the sandbox file, `TokenContentGenerator.kt` next to the production one. If you copy only the refinement extension, the build dies in fir2ir; see [Members of the generated local class must come from a `FirDeclarationGenerationExtension`](#members-of-the-generated-local-class-must-come-from-a-firdeclarationgenerationextension).
 
 ## What you get
 
@@ -117,6 +119,10 @@ class MyRefinement(session: FirSession) : FirFunctionCallRefinementExtension(ses
             source = callInfo.callSite.source?.fakeElement(
                 KtFakeSourceElementKind.PluginGenerated.Custom(RefinedSourceKind.Schema(refinedClassId.shortClassName.asString())),
             )
+            origin = FirDeclarationOrigin.Plugin(MyRefinementKey)
+            // Do NOT add a constructor (or any member) to `declarations` here: for a Plugin-origin
+            // class fir2ir only sees members that a FirDeclarationGenerationExtension reports.
+            // `MyRefinedClassMemberGenerator` below supplies the primary constructor.
             /* remaining fields populated from callInfo.arguments */
         }
 
@@ -148,6 +154,12 @@ class MyRefinement(session: FirSession) : FirFunctionCallRefinementExtension(ses
 private sealed class RefinedSourceKind {
     data class Schema(val name: String) : RefinedSourceKind()
 }
+
+data object MyRefinementKey : GeneratedDeclarationKey()
+
+// Plus the companion `MyRefinedClassMemberGenerator : FirDeclarationGenerationExtension` that supplies
+// the primary constructor of every `Refined_*` class — full listing under
+// "Members of the generated local class must come from a FirDeclarationGenerationExtension" below.
 ```
 
 The full implementations in `DataFrameLikeCallsRefinementExtension.kt` (sandbox) and `FunctionCallTransformer.kt` (kotlin-dataframe) span ~200-400 lines each — type construction, symbol cloning, and source-element propagation are most of the volume.
@@ -161,21 +173,97 @@ class MyFirExtensionRegistrar : FirExtensionRegistrar() {
     @OptIn(FirExtensionApiInternals::class)
     override fun ExtensionRegistrarContext.configurePlugin() {
         +::MyRefinement
+        +::MyRefinedClassMemberGenerator // supplies the generated local class's constructor; without it fir2ir NPEs
     }
 }
 ```
 
-The opt-in is per-registrar — you don't need it on the extension class itself.
+The opt-in is per-registrar — you don't need it on the extension class itself. The second line is not optional: see the next section.
+
+## Members of the generated local class must come from a `FirDeclarationGenerationExtension`
+
+This is the rule the reference implementations follow silently and the one that turns "frontend works, backend crashes" into a working build.
+
+**Mechanism.** The class you build in `intercept` has `origin = FirDeclarationOrigin.Plugin(key)`, and `Plugin` is declared with `generated = true`. For any class whose origin is `generated`, `FirDeclaredMemberScopeProvider.createDeclaredMemberScope` builds the declared-member scope **exclusively** from registered `FirDeclarationGenerationExtension`s (`FirGeneratedClassDeclaredMemberScope.create(..., regularDeclaredScope = null, scopeForGeneratedClass = true) ?: FirTypeScope.Empty`) and never reads `klass.declarations`. Everything downstream goes through that scope: `FirClass.constructors(session)` / `primaryConstructorIfAny(session)` call `session.declaredMemberScope(this).processDeclaredConstructors`, and fir2ir's `Fir2IrConverter.processClassMembers` creates the IR primary constructor via `klass.primaryConstructorIfAny(session)`. A constructor you appended to `declarations` by hand therefore never gets an `IrConstructor` created or cached.
+
+**Crash signature.** `ClassMemberGenerator.convertClassContent` *does* read `klass.declarations` when it looks for the primary constructor, finds your hand-built one, and then dereferences the cache that was never filled:
+
+```
+Exception was thrown during transformation of class org.jetbrains.kotlin.fir.expressions.impl.FirFunctionCallImpl
+Caused by: java.lang.NullPointerException
+  at org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator.convertClassContent(ClassMemberGenerator.kt:76)
+  at org.jetbrains.kotlin.fir.backend.Fir2IrVisitor.visitRegularClass(Fir2IrVisitor.kt:205)
+  ...
+  at org.jetbrains.kotlin.fir.backend.Fir2IrVisitor.visitAnonymousFunction(...)   <- the wrapper lambda
+```
+
+(line 76 at 2.4.20 is `primaryConstructor?.let { declarationStorage.getCachedIrConstructorSymbol(it)!!.owner }`). The `FirConstructor` branch of `processMemberDeclaration` skips primary constructors on purpose ("already created in `processClassMembers`"), so there is no second chance. Leaving the class with **no** constructor at all gets you past fir2ir but fails in `LocalDeclarationsLowering` with `AssertionError: Expected at least one constructor calling super`.
+
+**Fix.** Register a companion `FirDeclarationGenerationExtension` that recognizes your local classes by origin key, advertises `SpecialNames.INIT`, and returns a primary constructor built with the plugin-utils helper. `generateDelegatedNoArgConstructorCall = true` fills in `delegatedConstructor` (a call to `Any()`), and fir2ir synthesizes the constructor body from `delegatedConstructor` plus an `IrInstanceInitializerCall` even though `body == null` — no IR-side body filler is needed. Copy-pasteable (this is the generator from a probe plugin that was built and run against 2.4.20, renamed):
+
+```kotlin
+import org.jetbrains.kotlin.GeneratedDeclarationKey
+import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.declarations.FirDeclarationOrigin
+import org.jetbrains.kotlin.fir.declarations.utils.isLocal
+import org.jetbrains.kotlin.fir.extensions.FirDeclarationGenerationExtension
+import org.jetbrains.kotlin.fir.extensions.MemberGenerationContext
+import org.jetbrains.kotlin.fir.plugin.createConstructor
+import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirConstructorSymbol
+import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.name.SpecialNames
+
+data object MyRefinementKey : GeneratedDeclarationKey()
+
+/**
+ * Supplies the primary constructor of every local class emitted by the refinement extension.
+ * Classes with a `FirDeclarationOrigin.Plugin` origin get their declared member scope exclusively
+ * from `FirDeclarationGenerationExtension`s, so this is the only channel through which fir2ir can
+ * discover (and cache) the constructor before `convertClassContent` asks for it.
+ */
+class MyRefinedClassMemberGenerator(session: FirSession) : FirDeclarationGenerationExtension(session) {
+    private fun FirClassSymbol<*>.isRefinedClass(): Boolean =
+        isLocal && (origin as? FirDeclarationOrigin.Plugin)?.key == MyRefinementKey
+
+    override fun getCallableNamesForClass(classSymbol: FirClassSymbol<*>, context: MemberGenerationContext): Set<Name> =
+        if (classSymbol.isRefinedClass()) setOf(SpecialNames.INIT) else emptySet()
+
+    override fun generateConstructors(context: MemberGenerationContext): List<FirConstructorSymbol> {
+        if (!context.owner.isRefinedClass()) return emptyList()
+        return listOf(
+            createConstructor(context.owner, MyRefinementKey, isPrimary = true, generateDelegatedNoArgConstructorCall = true).symbol,
+        )
+    }
+}
+```
+
+and in the registrar, next to the refinement extension:
+
+```kotlin
++::MyRefinedClassMemberGenerator
+```
+
+The same applies to every other member you want the class to have (the "columns" of a schema class): report their names from `getCallableNamesForClass` and build them in `generateProperties` / `generateFunctions`. `ClassMemberGenerator.convertClassContent` and `Fir2IrConverter.processClassMembers` pick generated members up through `klass.generatedMembers(session)`, which is again scope-based. This is exactly how the reference implementations are wired: kotlin-dataframe's `TokenContentGenerator.getCallableNamesForClass` adds `SpecialNames.INIT` for every class carrying `callShapeData` and `generateConstructors` returns `createConstructor(context.owner, DataFrameTokenContentKey, isPrimary = true)`; the sandbox's `DataFrameLikeTypeMembersGenerator` does the same and is registered in `FirPluginPrototypeExtensionRegistrar` alongside `DataFrameLikeCallsRefinementExtension`.
+
+Two details of the probe worth keeping:
+
+- Use `firClassLikeSymbol.isLocal` (`org.jetbrains.kotlin.fir.declarations.utils.isLocal`) for the locality check, not `classSymbol.classId.isLocal` — `ClassId.isLocal` is gated by `@ClassIdBasedLocality`, a `RequiresOptIn` at `WARNING` level whose message tells you to use the symbol accessor instead.
+- The generated class must still be emitted as a **statement** of the wrapper lambda (`statements += schemaClass`). If it is only referenced from the refined type and never placed in the IR tree, `JvmInventNamesForLocalClasses` never visits it and JVM codegen fails with `Local class-like declaration should have its name computed in InventNamesForLocalClasses: <stub>.RefinedSchema`.
+
+With the generator registered and the class emitted as a statement, the pipeline runs to bytecode: the local class shows up as `Outer$main$b$1$RefinedSchema.class` with a public no-arg constructor that calls `Object.<init>`. Codegen is not "incomplete" for this extension — it just has no fallback for members that only live in `declarations`.
 
 ## Common gotchas
 
 ### The body of the refined call is unchanged
 
-A common misconception: refinement does **not** rewrite what the function does at runtime. The original function is still called, with the original arguments, returning the original (less-specific) value. Refinement only narrows the **static type** the resolver gives the expression. If you need to change runtime behaviour, you need an `IrGenerationExtension` that recognises the refined-call pattern and rewrites the IR (the dataframe plugin does both: this extension for types, an IR transformer for the actual schema-aware codegen).
+A common misconception: refinement does **not** rewrite what the function does at runtime. The original function is still called, with the original arguments, returning the original (less-specific) value. Refinement only narrows the **static type** the resolver gives the expression. If you need to change runtime behaviour, you need an `IrGenerationExtension` that recognises the refined-call pattern and rewrites the IR (the dataframe plugin does all three: this extension for types, `TokenContentGenerator` — a `FirDeclarationGenerationExtension` — for the members of the generated classes, and an IR transformer for the actual schema-aware codegen).
 
 ### Generated declarations must be **local**
 
 The KDoc explicitly states: "Generated declarations should be local because this `FirExtension` works at body resolve stage and thus cannot create new top level declarations." Wrapping in `run { ... }` is mandatory for that reason — you have a body scope to put your local class in. Returning a top-level class from `transform` produces a corruption error during serialization (the metadata writer sees a class with no enclosing source file).
+
+Local does not mean "hand-assembled": the class's members still have to arrive through a `FirDeclarationGenerationExtension` (see [Members of the generated local class must come from a `FirDeclarationGenerationExtension`](#members-of-the-generated-local-class-must-come-from-a-firdeclarationgenerationextension)), because a `Plugin`-origin class's declared member scope ignores `declarations`.
 
 ### Generated local declarations need **distinct** source elements (2.4.20+)
 
@@ -254,6 +342,8 @@ fun test(df: DataFrame<*>) {
 ```
 
 Without the extension, `df1.column` is `Unresolved reference` (the declared return type is `DataFrame<Any?>`, not a schema with `column`). With the extension, the type at `df1` is `DataFrame<RefinedSchemaN>` where `RefinedSchemaN` was synthesised at the call site.
+
+Note the `// RUN_PIPELINE_TILL: FRONTEND` directive: the sandbox test stops after FIR and never proves that the generated class survives fir2ir and JVM lowering. Add a box test (or a real Gradle sample) to your own suite — the missing-generator mistake described above is invisible to a frontend-only diagnostic test.
 
 ## Relation to other extensions
 
