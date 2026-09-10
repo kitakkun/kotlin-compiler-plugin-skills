@@ -51,3 +51,18 @@ The injected supertype shows up in the actual `implements` list of the generated
 ## Why this proves the supertype was injected (not just declared in metadata)
 
 The cast `Foo.Companion as Marker` is enforced at runtime by a JVM `CHECKCAST` against `com/example/Marker`. Had the plugin only added `Marker` to FIR metadata without it making it into the supertype list of the produced bytecode, the cast would have thrown `ClassCastException` at runtime — but the program completes normally and prints the second line. Combined with the `javap` output above, this confirms the supertype is materialised end-to-end (FIR → IR → JVM bytecode) and is not a metadata-only artefact.
+
+## Re-run on Kotlin 2.4.20
+
+**Status: PASS** (unchanged from the 2.3.21 result; no source changes were needed, only the version pins in `build.gradle.kts`).
+
+```
+$ ../gradlew --no-daemon -q clean :sample:run
+--- main start ---
+Foo.Companion.marked() = yes
+(Foo.Companion as Marker).marked() = yes
+--- main end ---
+(exit code 0)
+```
+
+Validated with Kotlin 2.4.20, Gradle 9.5.0, JDK 21 on 2026-09-10.

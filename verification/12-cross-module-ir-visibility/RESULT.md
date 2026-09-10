@@ -220,3 +220,15 @@ on `Foo`.
    not warn that the bare `IrClass.addFunction { builder }` overload omits
    the dispatch receiver and produces metadata that does not match the
    emitted bytecode.
+
+## Re-run on Kotlin 2.4.20
+
+**Status: PASS** (unchanged from the 2.3.21 result; no source changes were needed, only the version pins in `build.gradle.kts`).
+
+```
+$ ../gradlew --no-daemon -q clean :module-b:run
+ir-generated
+(exit code 0)
+```
+
+Validated with Kotlin 2.4.20, Gradle 9.5.0, JDK 21 on 2026-09-10.

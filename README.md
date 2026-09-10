@@ -15,7 +15,7 @@ In Claude Code, register this repo as a plugin marketplace, then install the plu
 
 The single `kotlin-compiler-plugin` skill is auto-discovered after install; list it via `/plugin`. Its router `SKILL.md` lives at `skills/kotlin-compiler-plugin/SKILL.md` and the per-topic guides under `skills/kotlin-compiler-plugin/references/<topic>/guide.md`. The router triggers on any Kotlin-compiler-plugin task and Claude reads only the references the task actually needs.
 
-Install footprint: the full repo is copied to `~/.claude/plugins/cache/` (a few MB). Only the skill's `SKILL.md` is auto-loaded into Claude's context — each reference's `guide.md` is read on demand, and the bundled `verification/` (13 working reference plugins) and `evaluation/` (6 benchmark tasks) sit on disk for you to inspect locally and never enter the token budget.
+Install footprint: the full repo is copied to `~/.claude/plugins/cache/` (a few MB). Only the skill's `SKILL.md` is auto-loaded into Claude's context — each reference's `guide.md` is read on demand, and the bundled `verification/` (17 working reference plugins) and `evaluation/` (6 benchmark tasks) sit on disk for you to inspect locally and never enter the token budget.
 
 To uninstall: `/plugin uninstall kotlin-compiler-plugin-skills@kotlin-compiler-plugin-skills`.
 
@@ -88,7 +88,7 @@ The repo has three top-level directories of working Gradle projects, each with a
 
 | Directory | Purpose | Style |
 |---|---|---|
-| `verification/` | Fine-grained probes — one project per claim in the reference guides (one per row of the "How to choose" table in `fir-extensions-overview`, plus cross-cutting probes for cross-module IR visibility and alternate status-transformer slots) | 13 self-contained plugin + sample setups; each ships a `SPEC.md` and `RESULT.md` |
+| `verification/` | Fine-grained probes — one project per claim in the reference guides (one per row of the "How to choose" table in `fir-extensions-overview`, plus cross-cutting probes for cross-module IR visibility, alternate status-transformer slots, and the Kotlin 2.4.20 API additions) | 17 self-contained plugin + sample setups pinned to Kotlin 2.4.20; each ships a `SPEC.md` and `RESULT.md` |
 | `evaluation/` | End-to-end agent benchmarks — fixed implementation tasks of increasing complexity that measure how well a fresh Claude agent can produce a working plugin from the skill alone | 6 tasks; each ships a `SPEC.md` and `RESULT.md`; see `evaluation/README.md` for rubric |
 
 The minimal didactic example for the bootstrap guide lives at `skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/example/` (`hello-plugin`) — co-located with the guide that uses it.

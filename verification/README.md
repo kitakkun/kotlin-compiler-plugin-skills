@@ -1,6 +1,6 @@
 # Verification
 
-Each subdirectory is an **independent Gradle project** that verifies a row of the "How to choose" table in `skills/kotlin-compiler-plugin/references/fir-extensions-overview/guide.md`. Every verification has:
+Each subdirectory is an **independent Gradle project** that verifies a row of the "How to choose" table in `skills/kotlin-compiler-plugin/references/fir-extensions-overview/guide.md` (01-11), or a cross-cutting claim from another reference guide (12-17). All probes are pinned to Kotlin 2.4.20; each `RESULT.md` records the most recent run. Every verification has:
 
 - `SPEC.md` — the goal and PASS criterion for this verification
 - `plugin/` — the compiler plugin implementing the relevant FIR extension
@@ -44,3 +44,7 @@ PASS criterion differs per verification:
 | 11 | `FirFunctionCallRefinementExtension` | Refine call return type at call site |
 | 12 | Cross-module IR-generated declaration visibility | Module A's IR-generated member is invisible to A's own source but visible to module B's source via `metadataDeclarationRegistrar` |
 | 13 | `FirStatusTransformerExtension` (`isInline` slot) | Flip `isInline` on a function via `status.transform { isInline = true }` and confirm bytecode-level inlining |
+| 14 | `IrGeneratedDeclarationsRegistrar.registerClassAsMetadataVisible` (2.4.20) | Whole IR-synthesized class (constructor + `val` + `fun`, plus a nested class inside a source-declared outer) referenced from a downstream module that does not apply the plugin |
+| 15 | `@MessageCollectorAccess` opt-in / `CompilerConfiguration.report*` (2.4.20) | Registrar reads `configuration.messageCollector` under the opt-in and an `IrGenerationExtension` prints `w: hello from plugin`; removing the opt-in fails the plugin build; `report(COMPILER_PLUGIN_INITIALIZATION_WARNING)` / `reportInfo` / `reportLog` work without it |
+| 16 | IR annotation-argument helpers (2.4.20) | Read `@Tag(name, times)` via `getConstArgument` / `getAnnotationArgumentValue` / `argumentMapping` / `classSymbol` / `isAnnotation(ClassId)`; confirm the removed `getAnnotationStringValue` / `getAnnotationValueOrNull` / `IrConstructorCall.getValueArgument(Name)` are unresolved |
+| 17 | `FirNamedFunctionChecker` / `namedFunctionCheckers` (2.4.20 rename) | Reject all-upper-case `fun SHOUT()` with `NO_SHOUTING` on the name identifier; the context-parameter `check` override compiles without `-Xcontext-parameters` |
