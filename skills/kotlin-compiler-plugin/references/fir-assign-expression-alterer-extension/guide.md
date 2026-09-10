@@ -5,9 +5,9 @@ description: Replace a Kotlin variable assignment (`x = value`) with an arbitrar
 
 # FirAssignExpressionAltererExtension
 
-This is the K2 extension point that hijacks `=` **on property assignments** — for any `lhs = rhs` where `lhs` resolves to a property (member or top-level), the extension can return a replacement statement (typically `lhs.assign(rhs)` or any other rewriting). The canonical production user is the **Kotlin Assignment Compiler Plugin** ([`plugins/assign-plugin/`](https://github.com/JetBrains/kotlin/tree/v2.4.0/plugins/assign-plugin) in JetBrains/kotlin) — applied in Gradle build scripts to enable the lazy-property idiom `task.input = "OK"` (rewritten to `task.input.assign("OK")`) for Gradle's `Property<T>` API. The plugin is JetBrains-maintained; Gradle is a downstream consumer that opts in via the `kotlin-assignment` Kotlin Gradle plugin.
+This is the K2 extension point that hijacks `=` **on property assignments** — for any `lhs = rhs` where `lhs` resolves to a property (member or top-level), the extension can return a replacement statement (typically `lhs.assign(rhs)` or any other rewriting). The canonical production user is the **Kotlin Assignment Compiler Plugin** ([`plugins/assign-plugin/`](https://github.com/JetBrains/kotlin/tree/v2.4.10/plugins/assign-plugin) in JetBrains/kotlin) — applied in Gradle build scripts to enable the lazy-property idiom `task.input = "OK"` (rewritten to `task.input.assign("OK")`) for Gradle's `Property<T>` API. The plugin is JetBrains-maintained; Gradle is a downstream consumer that opts in via the `kotlin-assignment` Kotlin Gradle plugin.
 
-Source: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirAssignExpressionAltererExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirAssignExpressionAltererExtension.kt).
+Source: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirAssignExpressionAltererExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirAssignExpressionAltererExtension.kt).
 
 ## What you get
 

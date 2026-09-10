@@ -6,6 +6,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-09-10
+
+### Changed
+
+- **Re-pinned the whole skill from Kotlin 2.4.0 to 2.4.10.** All EVIDENCE.md / guide.md permalinks now point at `v2.4.10`; every cited line number re-verified against the tag (299 citations, 0 dangling, 0 line-drift). None of the 167 cited source paths changed between `v2.4.0` and `v2.4.10` (25 upstream commits; the touched areas are Wasm IC, KGP, K/N simulators, Compose stability, scripting internals, and a `FirExpressionEvaluator` constant-folding fix — none affect the plugin-facing API), so no `CHANGES.md` migration sections were needed.
+- Code-sample version pins (`kotlin("jvm")`, `kotlin-compiler-embeddable`, `kotlin-compiler`, test-framework artifacts, the `kotlin.compiler` property default, and the CI matrix) bumped to 2.4.10 in `compiler-plugin-bootstrap`, `compiler-plugin-testing`, and `multi-version-kotlin-support`.
+- Bootstrap example (`compiler-plugin-bootstrap/example`) pinned to 2.4.10 and rebuilt clean (`:sample:run` prints the injected line).
+
+### Fixed
+
+- Recorded that the JDK 25 / BTAPI `JavaVersion.parse` workaround is **still required** on 2.4.10 (`versions.intellijSdk=251.27812.49` unchanged since 2.3.21).
+
+### Validated against
+
+- Kotlin 2.4.10, Gradle 9.5.0, JDK 21.
+- No reference guide was affected by the upstream diff, so the six `evaluation/` benchmarks were not re-run for this patch; the 0.3.0 results stand.
+
 ## [0.3.0] - 2026-06-13
 
 ### Changed

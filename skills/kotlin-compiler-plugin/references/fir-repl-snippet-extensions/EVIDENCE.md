@@ -7,7 +7,7 @@ All quoted snippets below originate from the JetBrains/kotlin repository under t
 ## `FirReplSnippetConfiguratorExtension` API surface
 
 ### Claim: four abstract methods including the eval-body rewriter
-- **File**: [`kotlin/compiler/fir/raw-fir/raw-fir.common/src/org/jetbrains/kotlin/fir/builder/FirReplSnippetConfiguratorExtension.kt:17-44`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/fir/raw-fir/raw-fir.common/src/org/jetbrains/kotlin/fir/builder/FirReplSnippetConfiguratorExtension.kt#L17-L44)
+- **File**: [`kotlin/compiler/fir/raw-fir/raw-fir.common/src/org/jetbrains/kotlin/fir/builder/FirReplSnippetConfiguratorExtension.kt:17-44`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/raw-fir/raw-fir.common/src/org/jetbrains/kotlin/fir/builder/FirReplSnippetConfiguratorExtension.kt#L17-L44)
 - **Snippet** (full class body):
   ```kotlin
   abstract class FirReplSnippetConfiguratorExtension(
@@ -49,7 +49,7 @@ All quoted snippets below originate from the JetBrains/kotlin repository under t
 ## `FirReplSnippetResolveExtension` API surface
 
 ### Claim: three abstract methods (default imports, cross-snippet scope, post-resolve hook)
-- **File**: [`kotlin/compiler/fir/providers/src/org/jetbrains/kotlin/fir/extensions/FirReplSnippetResolveExtension.kt:17-30`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/fir/providers/src/org/jetbrains/kotlin/fir/extensions/FirReplSnippetResolveExtension.kt#L17-L30)
+- **File**: [`kotlin/compiler/fir/providers/src/org/jetbrains/kotlin/fir/extensions/FirReplSnippetResolveExtension.kt:17-30`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/providers/src/org/jetbrains/kotlin/fir/extensions/FirReplSnippetResolveExtension.kt#L17-L30)
 - **Snippet** (v2.4.0 — note: this base became a `FirExtensionSessionComponent` in 2.4.0; through 2.3.x it was a standalone `FirExtension` with its own `NAME`/`Factory`):
   ```kotlin
   abstract class FirReplSnippetResolveExtension(
@@ -76,7 +76,7 @@ All quoted snippets below originate from the JetBrains/kotlin repository under t
 ## `FirReplHistoryProvider` API surface
 
 ### Claim: abstract `FirSessionComponent` listed in the same file as `FirReplSnippetResolveExtension`
-- **File**: [`kotlin/compiler/fir/providers/src/org/jetbrains/kotlin/fir/extensions/FirReplSnippetResolveExtension.kt:32-37`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/fir/providers/src/org/jetbrains/kotlin/fir/extensions/FirReplSnippetResolveExtension.kt#L32-L37)
+- **File**: [`kotlin/compiler/fir/providers/src/org/jetbrains/kotlin/fir/extensions/FirReplSnippetResolveExtension.kt:32-37`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/providers/src/org/jetbrains/kotlin/fir/extensions/FirReplSnippetResolveExtension.kt#L32-L37)
 - **Snippet**:
   ```kotlin
   abstract class FirReplHistoryProvider : FirSessionComponent {
@@ -93,7 +93,7 @@ All quoted snippets below originate from the JetBrains/kotlin repository under t
 ## `Fir2IrReplSnippetConfiguratorExtension` API surface
 
 ### Claim: single abstract method `Fir2IrComponents.prepareSnippet(visitor, firReplSnippet, irSnippet)`
-- **File**: [`kotlin/compiler/fir/fir2ir/src/org/jetbrains/kotlin/fir/backend/Fir2IrReplSnippetConfiguratorExtension.kt:13-31`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/fir/fir2ir/src/org/jetbrains/kotlin/fir/backend/Fir2IrReplSnippetConfiguratorExtension.kt#L13-L31)
+- **File**: [`kotlin/compiler/fir/fir2ir/src/org/jetbrains/kotlin/fir/backend/Fir2IrReplSnippetConfiguratorExtension.kt:13-31`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/fir2ir/src/org/jetbrains/kotlin/fir/backend/Fir2IrReplSnippetConfiguratorExtension.kt#L13-L31)
 - **Snippet**:
   ```kotlin
   abstract class Fir2IrReplSnippetConfiguratorExtension(
@@ -125,8 +125,8 @@ All quoted snippets below originate from the JetBrains/kotlin repository under t
 
 ## Registration via `FirExtensionRegistrar`
 
-### Claim: at v2.4.0 only two of the three REPL extensions appear in `AVAILABLE_EXTENSIONS`
-- **File**: [`kotlin/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt:23-43`](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt#L23-L43)
+### Claim: at v2.4.10 only two of the three REPL extensions appear in `AVAILABLE_EXTENSIONS`
+- **File**: [`kotlin/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt:23-43`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt#L23-L43)
 - The entries are: `Fir2IrReplSnippetConfiguratorExtension::class` (line 36) and `FirReplSnippetConfiguratorExtension::class` (line 37). `FirReplSnippetResolveExtension::class` is **no longer in this list at v2.4.0** — it became a `FirExtensionSessionComponent` (registered through the `FirExtensionSessionComponent` entry, accessed via `FirSession.replSnippetResolveExtension`). Through 2.3.x all three appeared here as standalone extension entries.
 
 ---

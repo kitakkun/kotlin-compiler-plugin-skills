@@ -61,7 +61,7 @@ include("plugin", "sample")
 
 ```kotlin
 plugins {
-    kotlin("jvm") version "2.4.0"
+    kotlin("jvm") version "2.4.10"
 }
 
 kotlin {
@@ -69,7 +69,7 @@ kotlin {
 }
 
 dependencies {
-    compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.4.0")
+    compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.4.10")
 }
 ```
 
@@ -81,7 +81,7 @@ For a plugin that emits custom diagnostics (checker), the goal is to verify that
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "2.4.0"
+    kotlin("jvm") version "2.4.10"
 }
 
 kotlin {
@@ -120,7 +120,7 @@ For a plugin that transforms code (generation, status change, call rewriting, et
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "2.4.0"
+    kotlin("jvm") version "2.4.10"
     application
 }
 
@@ -223,7 +223,7 @@ my-plugin/
 
 ```kotlin
 plugins {
-    kotlin("jvm") version "2.4.0"
+    kotlin("jvm") version "2.4.10"
     `java-test-fixtures`
 }
 
@@ -236,12 +236,12 @@ dependencies {
     // The official template uses `kotlin-compiler` for the plugin's compileOnly for this
     // reason. If you previously used `kotlin-compiler-embeddable` for Pattern A, switch to
     // `kotlin-compiler` when adopting Pattern B.
-    compileOnly("org.jetbrains.kotlin:kotlin-compiler:2.4.0")
+    compileOnly("org.jetbrains.kotlin:kotlin-compiler:2.4.10")
 
     // Test framework — testFixtures so test runners can be reused
-    testFixturesApi("org.jetbrains.kotlin:kotlin-test-junit5:2.4.0")
-    testFixturesApi("org.jetbrains.kotlin:kotlin-compiler-internal-test-framework:2.4.0")
-    testFixturesApi("org.jetbrains.kotlin:kotlin-compiler:2.4.0")
+    testFixturesApi("org.jetbrains.kotlin:kotlin-test-junit5:2.4.10")
+    testFixturesApi("org.jetbrains.kotlin:kotlin-compiler-internal-test-framework:2.4.10")
+    testFixturesApi("org.jetbrains.kotlin:kotlin-compiler:2.4.10")
     testFixturesRuntimeOnly("junit:junit:4.13.2")  // JUnit 4 also needed at runtime
 }
 
@@ -264,12 +264,12 @@ The framework looks up stdlib / reflect / kotlin-test JARs by absolute path via 
 val testArtifacts: Configuration by configurations.creating
 
 dependencies {
-    testArtifacts("org.jetbrains.kotlin:kotlin-stdlib:2.4.0")
-    testArtifacts("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.4.0")
-    testArtifacts("org.jetbrains.kotlin:kotlin-reflect:2.4.0")
-    testArtifacts("org.jetbrains.kotlin:kotlin-test:2.4.0")
-    testArtifacts("org.jetbrains.kotlin:kotlin-script-runtime:2.4.0")
-    testArtifacts("org.jetbrains.kotlin:kotlin-annotations-jvm:2.4.0")
+    testArtifacts("org.jetbrains.kotlin:kotlin-stdlib:2.4.10")
+    testArtifacts("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.4.10")
+    testArtifacts("org.jetbrains.kotlin:kotlin-reflect:2.4.10")
+    testArtifacts("org.jetbrains.kotlin:kotlin-test:2.4.10")
+    testArtifacts("org.jetbrains.kotlin:kotlin-script-runtime:2.4.10")
+    testArtifacts("org.jetbrains.kotlin:kotlin-annotations-jvm:2.4.10")
 }
 
 tasks.test {
@@ -323,7 +323,7 @@ A diagnostic test runner extends `AbstractFirPhasedDiagnosticTest`; a box test r
 
 The official template's `compiler-plugin/test-fixtures/.../runners/*.kt` files have the exact import lists for the Kotlin version it tracks; treat the table above as a starting cheat sheet rather than an exhaustive list.
 
-**`configure` vs `configuration` — same prefix, different members.** `AbstractKotlinCompilerTest` ([source](https://github.com/JetBrains/kotlin/blob/v2.4.0/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/AbstractKotlinCompilerTest.kt)) declares both:
+**`configure` vs `configuration` — same prefix, different members.** `AbstractKotlinCompilerTest` ([source](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/AbstractKotlinCompilerTest.kt)) declares both:
 
 ```kotlin
 protected val configuration: TestConfigurationBuilder.() -> Unit = { … }   // a property of lambda type
