@@ -1,8 +1,10 @@
 package com.example.refineplugin.fir
 
 import org.jetbrains.kotlin.GeneratedDeclarationKey
+import org.jetbrains.kotlin.KtFakeSourceElementKind
 import org.jetbrains.kotlin.KtSourceElement
 import org.jetbrains.kotlin.contracts.description.EventOccurrencesRange
+import org.jetbrains.kotlin.fakeElement
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.EffectiveVisibility
 import org.jetbrains.kotlin.descriptors.Modality
@@ -21,23 +23,23 @@ import org.jetbrains.kotlin.fir.declarations.FirRegularClass
 import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
 import org.jetbrains.kotlin.fir.declarations.InlineStatus
 import org.jetbrains.kotlin.fir.declarations.builder.buildAnonymousFunction
-import org.jetbrains.kotlin.fir.declarations.builder.buildPrimaryConstructor
 import org.jetbrains.kotlin.fir.declarations.builder.buildRegularClass
 import org.jetbrains.kotlin.fir.declarations.hasAnnotation
 import org.jetbrains.kotlin.fir.declarations.impl.FirResolvedDeclarationStatusImpl
-import org.jetbrains.kotlin.fir.declarations.primaryConstructorIfAny
-import org.jetbrains.kotlin.fir.expressions.FirEmptyArgumentList
+import org.jetbrains.kotlin.fir.declarations.utils.isLocal
 import org.jetbrains.kotlin.fir.expressions.FirFunctionCall
 import org.jetbrains.kotlin.fir.expressions.buildResolvedArgumentList
 import org.jetbrains.kotlin.fir.expressions.builder.buildAnonymousFunctionExpression
 import org.jetbrains.kotlin.fir.expressions.builder.buildBlock
-import org.jetbrains.kotlin.fir.expressions.builder.buildDelegatedConstructorCall
 import org.jetbrains.kotlin.fir.expressions.builder.buildFunctionCall
 import org.jetbrains.kotlin.fir.expressions.builder.buildReturnExpression
+import org.jetbrains.kotlin.fir.extensions.FirDeclarationGenerationExtension
 import org.jetbrains.kotlin.fir.extensions.FirExtensionApiInternals
 import org.jetbrains.kotlin.fir.extensions.FirExtensionSessionComponent
 import org.jetbrains.kotlin.fir.extensions.FirFunctionCallRefinementExtension
+import org.jetbrains.kotlin.fir.extensions.MemberGenerationContext
 import org.jetbrains.kotlin.fir.moduleData
+import org.jetbrains.kotlin.fir.plugin.createConstructor
 import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
 import org.jetbrains.kotlin.fir.references.builder.buildResolvedNamedReference
 import org.jetbrains.kotlin.fir.references.resolved
@@ -50,6 +52,7 @@ import org.jetbrains.kotlin.fir.symbols.SymbolInternals
 import org.jetbrains.kotlin.fir.symbols.impl.ConeClassLikeLookupTagImpl
 import org.jetbrains.kotlin.fir.symbols.impl.ConeClassLikeLookupTagWithFixedSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirAnonymousFunctionSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirConstructorSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirFunctionSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirNamedFunctionSymbol
@@ -58,13 +61,13 @@ import org.jetbrains.kotlin.fir.types.ConeClassLikeType
 import org.jetbrains.kotlin.fir.types.builder.buildResolvedTypeRef
 import org.jetbrains.kotlin.fir.types.builder.buildTypeProjectionWithVariance
 import org.jetbrains.kotlin.fir.types.impl.ConeClassLikeTypeImpl
-import org.jetbrains.kotlin.fir.types.impl.FirImplicitAnyTypeRef
 import org.jetbrains.kotlin.fir.types.resolvedType
 import org.jetbrains.kotlin.fir.visitors.FirTransformer
 import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.name.SpecialNames
 import org.jetbrains.kotlin.types.Variance
 
 private val REFINE_ANNOTATION = ClassId(FqName("com.example"), Name.identifier("RefineMe"))
@@ -80,42 +83,32 @@ class RefineCallExtension(session: FirSession) : FirFunctionCallRefinementExtens
 
         System.err.println("[RefineCallExtension] intercept fired for ${symbol.callableId}")
 
-        // Build a synthetic local class `RefinedSchema` with a primary constructor
-        // delegating to Any() so the IR backend can lower it.
+        // Build a synthetic local class `RefinedSchema`.
+        //
+        // NOTE: do NOT put a hand-built primary constructor into `declarations` here.
+        // The class has `FirDeclarationOrigin.Plugin` (origin.generated == true), and for
+        // such classes `FirDeclaredMemberScopeProvider.createDeclaredMemberScope` builds the
+        // declared member scope ONLY from FirDeclarationGenerationExtension results
+        // (FirGeneratedClassDeclaredMemberScope with scopeForGeneratedClass = true) and
+        // ignores `klass.declarations`. fir2ir's `processClassMembers` looks the primary
+        // constructor up through that scope (`primaryConstructorIfAny(session)`), so a
+        // constructor that only lives in `declarations` never gets an IR constructor cached,
+        // and `ClassMemberGenerator.convertClassContent` later NPEs on
+        // `getCachedIrConstructorSymbol(it)!!`. The constructor is instead supplied by
+        // `RefineSchemaConstructorGenerator` below (same pattern as kotlin-dataframe's
+        // TokenContentGenerator).
         val schemaId = localClassId(Name.identifier("RefinedSchema"))
         val schemaSymbol = FirRegularClassSymbol(schemaId)
         val anyType = session.builtinTypes.anyType.coneType
-        val schemaSelfType = ConeClassLikeTypeImpl(
-            ConeClassLikeLookupTagWithFixedSymbol(schemaId, schemaSymbol),
-            emptyArray(),
-            isMarkedNullable = false,
-        )
-        val anyClassSymbol = anyType.toRegularClassSymbol(session)
-            ?: error("Cannot resolve kotlin.Any class symbol")
-        val anyPrimaryConstructorSymbol = anyClassSymbol.fir.primaryConstructorIfAny(session)
-            ?: error("Cannot find kotlin.Any primary constructor")
-        val schemaConstructorSymbol = FirConstructorSymbol(schemaId)
-        val schemaConstructor = buildPrimaryConstructor {
-            resolvePhase = FirResolvePhase.BODY_RESOLVE
-            moduleData = session.moduleData
-            origin = FirDeclarationOrigin.Plugin(RefinePluginKey)
-            status = FirResolvedDeclarationStatusImpl(Visibilities.Public, Modality.FINAL, EffectiveVisibility.Local)
-            isLocal = true
-            returnTypeRef = buildResolvedTypeRef { coneType = schemaSelfType }
-            deprecationsProvider = EmptyDeprecationsProvider
-            this.symbol = schemaConstructorSymbol
-            delegatedConstructor = buildDelegatedConstructorCall {
-                constructedTypeRef = buildResolvedTypeRef { coneType = anyType }
-                argumentList = FirEmptyArgumentList
-                isThis = false
-                calleeReference = buildResolvedNamedReference {
-                    name = anyPrimaryConstructorSymbol.name
-                    resolvedSymbol = anyPrimaryConstructorSymbol
-                }
-            }
-        }
 
         val schemaClass = buildRegularClass {
+            // 2.4.20+: every local declaration injected into a source file must carry a
+            // distinct source element; use PluginGenerated.Custom with a per-class marker.
+            source = callInfo.callSite.source?.fakeElement(
+                KtFakeSourceElementKind.PluginGenerated.Custom(
+                    RefineSourceElementKind.SchemaClass(schemaId.shortClassName.asString()),
+                ),
+            )
             resolvePhase = FirResolvePhase.BODY_RESOLVE
             moduleData = session.moduleData
             origin = FirDeclarationOrigin.Plugin(RefinePluginKey)
@@ -126,7 +119,6 @@ class RefineCallExtension(session: FirSession) : FirFunctionCallRefinementExtens
             superTypeRefs += buildResolvedTypeRef { coneType = anyType }
             name = schemaId.shortClassName
             this.symbol = schemaSymbol
-            declarations += schemaConstructor
         }
 
         // Build refined return type: Box<RefinedSchema>.
@@ -190,6 +182,7 @@ class RefineCallExtension(session: FirSession) : FirFunctionCallRefinementExtens
             val target = FirFunctionTarget(null, isLambda = true)
             isTrailingLambda = true
             anonymousFunction = buildAnonymousFunction {
+                source = call.source?.fakeElement(KtFakeSourceElementKind.PluginGenerated.Default)
                 resolvePhase = FirResolvePhase.BODY_RESOLVE
                 moduleData = session.moduleData
                 origin = FirDeclarationOrigin.Plugin(RefinePluginKey)
@@ -198,11 +191,9 @@ class RefineCallExtension(session: FirSession) : FirFunctionCallRefinementExtens
                 returnTypeRef = buildResolvedTypeRef { coneType = returnType }
                 body = buildBlock {
                     this.coneTypeOrNull = returnType
-                    // Per the SKILL.md contract, the schema class is added as a
-                    // statement here so it appears as a local declaration in IR.
-                    // In v2.3.21 this triggers a Fir2IrClassifierStorage NPE because
-                    // the class gets cached on-the-fly without its constructor IR
-                    // being registered, leading to convertClassContent !! crash. See RESULT.md.
+                    // The schema class is added as a statement so it becomes a real
+                    // local declaration in the IR tree (otherwise JvmInventNamesForLocalClasses
+                    // never visits it). See RESULT.md.
                     statements += schemaClass
                     statements += buildReturnExpression {
                         result = call
@@ -259,6 +250,33 @@ class RefineCallExtension(session: FirSession) : FirFunctionCallRefinementExtens
             .getTopLevelFunctionSymbols(FqName("kotlin"), Name.identifier("run"))
             .firstOrNull { it.valueParameterSymbols.size == 1 && it.receiverParameterSymbol == null }
     }
+}
+
+/**
+ * Supplies the primary constructor of every `RefinedSchema` class emitted by [RefineCallExtension].
+ *
+ * Classes with a `FirDeclarationOrigin.Plugin` origin get their declared member scope exclusively
+ * from [FirDeclarationGenerationExtension]s, so this is the only channel through which fir2ir can
+ * discover (and cache) the constructor before `convertClassContent` asks for it.
+ */
+class RefineSchemaConstructorGenerator(session: FirSession) : FirDeclarationGenerationExtension(session) {
+    private fun FirClassSymbol<*>.isRefinedSchema(): Boolean =
+        isLocal && (origin as? FirDeclarationOrigin.Plugin)?.key == RefinePluginKey
+
+    override fun getCallableNamesForClass(classSymbol: FirClassSymbol<*>, context: MemberGenerationContext): Set<Name> =
+        if (classSymbol.isRefinedSchema()) setOf(SpecialNames.INIT) else emptySet()
+
+    override fun generateConstructors(context: MemberGenerationContext): List<FirConstructorSymbol> {
+        if (!context.owner.isRefinedSchema()) return emptyList()
+        return listOf(
+            createConstructor(context.owner, RefinePluginKey, isPrimary = true, generateDelegatedNoArgConstructorCall = true).symbol,
+        )
+    }
+}
+
+/** Markers for `KtFakeSourceElementKind.PluginGenerated.Custom`; data classes give stable equals/hashCode/toString. */
+private sealed class RefineSourceElementKind {
+    data class SchemaClass(val name: String) : RefineSourceElementKind()
 }
 
 class RefineCallDataStorage(session: FirSession) : FirExtensionSessionComponent(session) {

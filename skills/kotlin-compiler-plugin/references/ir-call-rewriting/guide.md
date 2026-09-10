@@ -209,7 +209,45 @@ override fun visitCall(expression: IrCall): IrExpression {
 }
 ```
 
-You'll need annotation-checking helpers; `IrAnnotationContainer.hasAnnotation(fqName)` is in `org.jetbrains.kotlin.ir.util`.
+You'll need annotation-checking helpers; `IrAnnotationContainer.hasAnnotation(fqName)` is in `org.jetbrains.kotlin.ir.util`, alongside the `hasAnnotation(ClassId)` and `hasAnnotation(IrClassSymbol)` overloads.
+
+### Reading annotation arguments (2.4.20+)
+
+Once you know the enclosing declaration is annotated, you usually need the annotation's arguments to decide *how* to rewrite. On Kotlin 2.4.20 the helpers are `IrAnnotation.getConstArgument<T>(name)` (const-valued lookup by parameter name), `IrAnnotationContainer.getAnnotationArgumentValue<T>(fqName, argName)` (the same without touching the `IrAnnotation` node), and the raw `IrAnnotation.argumentMapping: Map<Name, IrExpression?>`. The older `getAnnotationStringValue` / `getAnnotationValueOrNull` / `IrConstructorCall.getValueArgument(Name)` helpers were removed in 2.4.20 — see `CHANGES.md` if you are migrating.
+
+```kotlin
+import org.jetbrains.kotlin.ir.expressions.IrConst
+import org.jetbrains.kotlin.ir.util.getAnnotation
+import org.jetbrains.kotlin.ir.util.getAnnotationArgumentValue
+import org.jetbrains.kotlin.ir.util.getConstArgument
+import org.jetbrains.kotlin.ir.util.hasAnnotation
+import org.jetbrains.kotlin.ir.util.isAnnotation
+import org.jetbrains.kotlin.name.ClassId
+import org.jetbrains.kotlin.name.FqName
+import org.jetbrains.kotlin.name.Name
+
+// User code:
+//   annotation class Tag(val name: String, val times: Int)
+//   @Tag(name = "greeting", times = 3) fun tagged(): String = ...
+val TAG_CLASS_ID: ClassId = ClassId.topLevel(FqName("com.example.Tag"))
+val TAG_FQ_NAME: FqName = TAG_CLASS_ID.asSingleFqName()
+
+fun readTag(enclosing: IrFunction): Pair<String, Int>? {
+    if (!enclosing.hasAnnotation(TAG_CLASS_ID)) return null
+    val annotation = enclosing.getAnnotation(TAG_FQ_NAME) ?: return null
+    check(annotation.isAnnotation(TAG_CLASS_ID))
+
+    val name = annotation.getConstArgument<String>("name") ?: return null
+    val times = enclosing.getAnnotationArgumentValue<Int>(TAG_FQ_NAME, "times") ?: return null
+
+    // Raw view — the same lookup by hand, useful for non-const arguments (arrays, enums, nested annotations):
+    val rawName = (annotation.argumentMapping[Name.identifier("name")] as? IrConst)?.value
+    check(rawName == name)
+    return name to times
+}
+```
+
+All five helpers are top-level functions in `org.jetbrains.kotlin.ir.util` and need the imports shown; `argumentMapping` and `classSymbol` are members of `org.jetbrains.kotlin.ir.expressions.IrAnnotation`. `getConstArgument` / `getAnnotationArgumentValue` return `null` when the argument is absent or is not an `IrConst`, so the value you get back is already unwrapped (`String`, `Int`, ...). To identify the annotation class, compare `annotation.classSymbol` against a symbol from `pluginContext.finderForSource(file).findClass(classId)` or just use `isAnnotation(ClassId)` — do not dereference `classSymbol.owner` (that trips the `@UnsafeDuringIrConstructionAPI` opt-in warning), and do not read `annotation.symbol` (the constructor symbol), which is `@DeprecatedCompilerApi` since 2.4.20 and warns `This compiler API is deprecated`.
 
 ## Common gotchas
 

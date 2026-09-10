@@ -23,17 +23,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Four new verification probes** built against Kotlin 2.4.20 by following the guides (`verification/14-cross-module-ir-class-visibility`, `15-message-collector-access`, `16-ir-annotation-arguments`, `17-named-function-checker`): whole-class `registerClassAsMetadataVisible` (constructor + property + function + nested class visible downstream), the `@MessageCollectorAccess` opt-in and the opt-in-free `CompilerConfiguration.report*` helpers, the 2.4.20 `IrAnnotation` argument-reading API (and the removed helpers being unresolved), and `FirNamedFunctionChecker` / `namedFunctionCheckers` compiling without `-Xcontext-parameters`. All PASS; each `RESULT.md` carries a "Skill feedback" section whose findings are folded into the guides below.
 - `scripts/check_citation_drift.sh <clone> <old-tag> <new-tag>` — compares every cited line range at both tags and prints `DRIFT` (with candidate new line numbers) or `MISSING`; `verify_citations.sh` alone cannot see a file that changed above the cited line.
 
 ### Fixed
 
+- **From the probes** — `compiler-plugin-bootstrap` / `compiler-plugin-debugging`: an opt-in-free WARNING does exist (`configuration.report(CliDiagnostics.COMPILER_PLUGIN_INITIALIZATION_WARNING, ...)`), `reportLog` output is hidden rather than dropped on the daemon path, the accessor form needs `import org.jetbrains.kotlin.config.messageCollector`. `ir-call-rewriting`: the 2.4.20 annotation-argument API now has a body section with a copy-pasteable snippet; `IrAnnotation.symbol`'s `@DeprecatedCompilerApi` is a `@RequiresOptIn` marker that `@Suppress("DEPRECATION")` cannot silence. `ir-synthetic-class-generation`: "source-invisible" now qualified to the defining module; dispatch receiver added to the new-class `addFunction` step; `addBackingField` replaces the hand-built field; constructor-initializes-field ordering; nested-in-source-outer registration rule. `fir-additional-checkers-extension`: real text of the redundant `-Xcontext-parameters` warning, generated-file paths under `checkers/gen/`, the real `'simpleFunctionCheckers' overrides nothing` message. `fir-function-call-refinement-extension`: a plugin-origin local class gets its member scope only from `FirDeclarationGenerationExtension`s, so the constructor must come from a companion generator (the kotlin-dataframe `TokenContentGenerator` pattern); this was the real cause of the codegen NPE the probe had recorded since 2.3.21, not a compiler limitation.
 - `scripts/bump_kotlin_version.sh` now also re-pins `guide.md` permalinks and no longer rewrites historical rows in `README.md` / `CHANGELOG.md`. `CONTRIBUTING.md`'s version-bump procedure updated accordingly, including the zsh word-splitting pitfall that can make the cited-path diff look empty.
 - JDK 25 / BTAPI `JavaVersion.parse` note: `versions.intellijSdk` is unchanged at 2.4.20, so the workaround is kept; a naive reproduction (toolchain 21, daemon strategy) does not hit the failure on either 2.4.10 or 2.4.20, which is now recorded in EVIDENCE.
 
 ### Validated against
 
 - Kotlin 2.4.20, Gradle 9.5.0, JDK 21 (plus JDK 25 launcher for the BTAPI probe).
-- `evaluation/` benchmarks were not re-run for this release; the affected guides were re-validated by source reading and by compiling the `MessageCollectorAccess` case. A future run against 2.4.20 is recommended before 0.4.0.
+- All 17 `verification/` probes rebuilt clean on Kotlin 2.4.20 (13 existing probes re-pinned from 2.3.21 — 12 unchanged, `11-function-call-refinement` fixed and promoted from PARTIAL to PASS — plus the four new ones); every `RESULT.md` records the 2.4.20 run.
+- `evaluation/` benchmarks were not re-run for this release. A future run against 2.4.20 is recommended before 0.4.0.
 
 ## [0.3.1] - 2026-09-10
 

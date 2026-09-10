@@ -121,3 +121,15 @@ in the IR backend.
 - `plugin/src/main/kotlin/com/example/inlineplugin/fir/MakeInlineStatusTransformer.kt`
 - `plugin/src/main/resources/META-INF/services/org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar`
 - `sample/src/main/kotlin/Main.kt`
+
+## Re-run on Kotlin 2.4.20
+
+**Status: PASS** (unchanged from the 2.3.21 result; no source changes were needed, only the version pins in `build.gradle.kts`).
+
+```
+$ ../gradlew --no-daemon -q clean :sample:run
+found
+(exit code 0)
+```
+
+Validated with Kotlin 2.4.20, Gradle 9.5.0, JDK 21 on 2026-09-10.
