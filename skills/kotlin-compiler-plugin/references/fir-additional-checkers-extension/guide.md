@@ -7,7 +7,7 @@ description: Add custom Kotlin diagnostics (errors and warnings shown in the IDE
 
 This is the K2 extension point that gates **diagnostics** — the warnings and errors the compiler reports against user source. Anything you'd want to be a `w:` or `e:` line in `kotlinc` output, or a red/yellow squiggle in the IDE, is implemented here.
 
-Source: [`kotlin/compiler/fir/checkers/src/org/jetbrains/kotlin/fir/analysis/extensions/FirAdditionalCheckersExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/checkers/src/org/jetbrains/kotlin/fir/analysis/extensions/FirAdditionalCheckersExtension.kt).
+Source: [`kotlin/compiler/fir/checkers/src/org/jetbrains/kotlin/fir/analysis/extensions/FirAdditionalCheckersExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/checkers/src/org/jetbrains/kotlin/fir/analysis/extensions/FirAdditionalCheckersExtension.kt).
 
 ## What you get
 
@@ -153,7 +153,7 @@ Each `Fir*Checker` base class corresponds to a FIR node type. The most common on
 | Base class | Triggered for | `check()` parameter type |
 |---|---|---|
 | `FirRegularClassChecker` | every concrete class/interface declaration | `FirRegularClass` |
-| `FirSimpleFunctionChecker` | every named function | `FirNamedFunction` ⚠️ |
+| `FirNamedFunctionChecker` | every named function | `FirNamedFunction` ⚠️ |
 | `FirPropertyChecker` | every property | `FirProperty` |
 | `FirFunctionCallChecker` | every call expression | `FirFunctionCall` |
 | `FirReturnExpressionChecker` | every `return` | `FirReturnExpression` |
@@ -162,7 +162,7 @@ Each `Fir*Checker` base class corresponds to a FIR node type. The most common on
 | `FirFileChecker` | every source file | `FirFile` |
 | `FirBasicDeclarationChecker` | catch-all for any declaration | `FirDeclaration` |
 
-⚠️ **`FirSimpleFunctionChecker` is a typealias** — `typealias FirSimpleFunctionChecker = FirDeclarationChecker<FirNamedFunction>`. The FIR node was renamed from `FirSimpleFunction` to `FirNamedFunction` but the checker class kept its old name for source compatibility. Your `check()` override must use `declaration: FirNamedFunction` — `FirSimpleFunction` won't compile.
+⚠️ **`FirNamedFunctionChecker` is a typealias** — `typealias FirNamedFunctionChecker = FirDeclarationChecker<FirNamedFunction>`. Up to Kotlin 2.4.10 this alias was called `FirSimpleFunctionChecker` (the FIR node had already been renamed from `FirSimpleFunction` to `FirNamedFunction`, but the checker alias kept the old wording); Kotlin 2.4.20 renamed the alias to `FirNamedFunctionChecker` and the matching `DeclarationCheckers.simpleFunctionCheckers` bucket to `namedFunctionCheckers`, with no deprecated alias left behind. Your `check()` override must use `declaration: FirNamedFunction` — `FirSimpleFunction` won't compile. See `CHANGES.md` for the cross-version pattern.
 
 `MppCheckerKind` is a **session-routing** flag, not an expect/actual filter:
 - `Common` runs in the declaration's owning session — what most checkers want.
@@ -182,7 +182,7 @@ object MustBeFinalDeclarationCheckers : DeclarationCheckers() {
 }
 ```
 
-Each `*Checkers` container has typed fields for each kind of node (regularClassCheckers, simpleFunctionCheckers, etc.). Override only the ones you populate.
+Each `*Checkers` container has typed fields for each kind of node (`regularClassCheckers`, `namedFunctionCheckers` — called `simpleFunctionCheckers` before 2.4.20 — etc.). Override only the ones you populate.
 
 ### 5. Extension class
 
@@ -218,7 +218,7 @@ class MyFirExtensionRegistrar : FirExtensionRegistrar() {
 `FirDeclarationChecker.check` is declared with **context parameters**:
 
 ```kotlin
-// kotlin/compiler/fir/checkers/src/.../FirDeclarationChecker.kt:14-17
+// kotlin/compiler/fir/checkers/src/.../FirDeclarationChecker.kt:14-18
 abstract class FirDeclarationChecker<D : FirDeclaration> {
     // Invariant on purpose: the KDoc says "We don't declare it as `in D` because we
     // want to prevent accidentally adding more general checkers to sets of specific
@@ -228,30 +228,30 @@ abstract class FirDeclarationChecker<D : FirDeclaration> {
 }
 ```
 
-The override **must** use the matching context-parameter form. A regular three-parameter `fun check(declaration, context, reporter)` does *not* override the abstract member — it's a separate method, and the abstract one stays unimplemented. (Older plugin code from before context parameters were stable on `FirDeclarationChecker.check` used a regular `fun check(declaration, context, reporter)` value-parameter signature; current Kotlin 2.3+ is context-parameters all the way down.)
+The override **must** use the matching context-parameter form. A regular three-parameter `fun check(declaration, context, reporter)` does *not* override the abstract member — it's a separate method, and the abstract one stays unimplemented. (Older plugin code from before context parameters were stable on `FirDeclarationChecker.check` used a regular `fun check(declaration, context, reporter)` value-parameter signature; current Kotlin 2.4.x is context-parameters all the way down.)
 
 `reporter.reportOn(source, factory)` is the idiomatic call inside a `context(... DiagnosticReporter)`-bearing function — no trailing `context` argument because it's already in scope.
 
-### `-Xcontext-parameters` flag is required (until context parameters are stabilised)
+### `-Xcontext-parameters` is no longer needed (stable since Kotlin 2.4.0)
 
-Context parameters are still gated behind a feature flag in Kotlin 2.3.x. **Without `-Xcontext-parameters` in the plugin module's compiler args, your override won't compile** — you'll get:
+Context parameters are a stable language feature since Kotlin 2.4.0 (`LanguageFeature.ContextParameters` has `sinceVersion = KOTLIN_2_4`), so the `context(context: CheckerContext, reporter: DiagnosticReporter)` override above compiles without any extra flag on the target version. If the plugin module still carries the flag from a 2.3.x-era build, the compiler reports it as redundant:
 
 ```
-e: ... The feature "context parameters" is experimental and should be enabled explicitly.
-e: ... To call contextual declarations, specify the '-Xcontext-parameters' compiler option.
+w: ... "-Xcontext-parameters" has no effect: the feature is enabled by default since language version 2.4
 ```
 
-Enable it in the plugin module's `build.gradle.kts`:
+Drop it from `build.gradle.kts`:
 
 ```kotlin
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 tasks.withType<KotlinCompile>().configureEach {
-    compilerOptions.freeCompilerArgs.add("-Xcontext-parameters")
+    // No longer needed on Kotlin 2.4+; keep only while the same source set must also build on 2.3.x.
+    // compilerOptions.freeCompilerArgs.add("-Xcontext-parameters")
 }
 ```
 
-This applies to the **plugin** module (where `MustBeFinalChecker` is defined), not the sample. Once Kotlin stabilises context parameters in a future minor release, this flag will become unnecessary and emit a warning if still set; remove it then.
+Keep the flag only if the same plugin source set must also compile against a 2.3.x compiler, where the feature was still experimental and the override would otherwise fail with `The feature "context parameters" is experimental and should be enabled explicitly`. See `CHANGES.md` for the 2.3 → 2.4 note.
 
 There is a **complementary flag** for the consumer/sample module that controls diagnostic factory-name visibility in compile output — see the `-Xrender-internal-diagnostic-names` section below.
 
@@ -283,9 +283,9 @@ reporter.reportOn(source, MyDiagnostics.MY_ERROR, positioningStrategy = SourceEl
 | `TYPE_PARAMETERS_LIST` | `<...>` of a generic declaration |
 | `VAL_OR_VAR_NODE` | `val` / `var` keyword of a property |
 | `OVERRIDE_MODIFIER` | the `override` keyword |
-| `SECONDARY_CONSTRUCTOR_KEYWORD` | the `constructor` keyword of a secondary constructor |
+| `DECLARATION_RETURN_TYPE` | the declared return type of a callable |
 
-The full catalogue lives at `kotlin/compiler/frontend.common-psi/src/org/jetbrains/kotlin/diagnostics/SourceElementPositioningStrategies.kt` — when you need a strategy not listed above (e.g. `TYPE_OF_DECLARATION`, `SUPERTYPES_LIST`), check the source for the exact `val` name.
+The full catalogue lives at `kotlin/compiler/frontend.common-psi/src/org/jetbrains/kotlin/diagnostics/SourceElementPositioningStrategies.kt` — when you need a strategy not listed above (e.g. `DECLARATION_SIGNATURE`, `SUPERTYPES_LIST`), check the source for the exact `val` name.
 
 ### `-Xrender-internal-diagnostic-names` — making factory names appear in compile output (consumer module)
 
@@ -330,7 +330,7 @@ val symbol = context.session.symbolProvider.getClassLikeSymbolByClassId(MyClassI
 
 ### Recursing into expressions
 
-`FirSimpleFunctionChecker` only fires on the function declaration; to inspect its body, walk the FIR tree from `function.body`. For per-expression checks the `expressionCheckers` bucket is more efficient — the FIR pipeline visits expressions for you.
+`FirNamedFunctionChecker` only fires on the function declaration; to inspect its body, walk the FIR tree from `function.body`. For per-expression checks the `expressionCheckers` bucket is more efficient — the FIR pipeline visits expressions for you.
 
 ## Severity choice
 

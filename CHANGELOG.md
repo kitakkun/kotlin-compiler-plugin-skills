@@ -6,6 +6,35 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-09-10
+
+### Changed
+
+- **Retargeted the whole skill from Kotlin 2.4.10 to 2.4.20.** All EVIDENCE.md / guide.md permalinks re-pinned to `v2.4.20`; 61 of the 167 cited source paths changed across the 3,939 upstream commits, producing 64 line-drift citations and 2 moved/deleted paths, all re-anchored and re-verified (358 citations, 0 dangling). Every changed cited file was read for plugin-facing API changes; the results below each gained a `## Kotlin 2.4.10 → 2.4.20` section in the topic's `CHANGES.md`.
+- **`compiler-plugin-bootstrap` / `compiler-plugin-debugging`**: `CommonConfigurationKeys.MESSAGE_COLLECTOR_KEY` and `CompilerConfiguration.messageCollector` now require `@OptIn(MessageCollectorAccess::class)` (KT-78277; empirically confirmed to be a compile error without it). The legacy K1 `ComponentRegistrar` was deleted (KT-85816). IR validation now reports through `IrDiagnosticReporter` (`IR_VALIDATION_ERROR` / `IR_VALIDATION_WARNING`); `-Xverify-ir-visibility` / `-Xverify-ir-nested-offsets` were replaced by `-Xdisable-ir-checkers` / `-Xenable-additional-ir-checkers`; `JvmK1IrValidationBeforeLoweringPhase` is gone; `MessageCollectorWithDiagnosticId` added.
+- **`compiler-plugin-testing`**: box-test base class is now `AbstractJvmBlackBoxCodegenTestBase(parser: FirParser)` (`AbstractFirBlackBoxCodegenTestBase` deleted, KT-85292); `PhasedPipelineChecker` and friends are wired as `TestFailureSuppressor`s. `RUN_PIPELINE_TILL` stays mandatory.
+- **`fir-additional-checkers-extension`**: `FirSimpleFunctionChecker` → `FirNamedFunctionChecker`, `simpleFunctionCheckers` → `namedFunctionCheckers` (no alias left); new `infoWithoutSource()`; `SourceElementPositioningStrategies.VALUE_ARGUMENTS` removed. Also fixed two strategy names that never existed (`SECONDARY_CONSTRUCTOR_KEYWORD`, `TYPE_OF_DECLARATION`).
+- **`fir-declaration-generation-extension`**: new `generateFields` callback (`@UnsafePluginApi`, Java-interop only); `GeneratedDeclarationKey.toString()` now defaults to the simple class name; `createConstructor(generateDelegatedNoArgConstructorCall = true)` is best-effort instead of throwing when the superclass has no zero-arg constructor.
+- **`ir-synthetic-class-generation`**: `IrGeneratedDeclarationsRegistrar` gained `registerClassAsMetadataVisible` and `registerPropertyAsMetadataVisible` (KT-79565 / KT-63881); the guide now recommends one class-level registration, keeping the per-member loop as the ≤2.4.10 fallback.
+- **`ir-call-rewriting`**: `IrUtils.kt` annotation helpers `getAnnotationStringValue`, `getAnnotationValueOrNull`, `IrConstructorCall.getValueArgument(Name)` removed without deprecation; use `getAnnotationArgumentValue` / `IrAnnotation.getConstArgument` / `argumentMapping`. `IrAnnotation.symbol` deprecated in favor of `classSymbol`. Also corrected a pre-existing claim that `hasAnnotationOrOverridden` lives in `org.jetbrains.kotlin.ir.util` (it is power-assert's own helper).
+- **`fir-function-call-refinement-extension`**: `KtFakeSourceElementKind.PluginGenerated` became a sealed class (`Default` / `Custom(marker)`, KT-84344); generated local declarations must carry distinct source elements, which the diagnostic test infrastructure now enforces.
+- **`fir-status-transformer-extension`**, **`fir-session-components`**, remaining FIR and IR topics: line drift only; `FirExtensionRegistrar.AVAILABLE_EXTENSIONS` still has 17 entries in the same order.
+- Code-sample version pins bumped to 2.4.20; bootstrap example pinned to 2.4.20 and rebuilt clean.
+
+### Added
+
+- `scripts/check_citation_drift.sh <clone> <old-tag> <new-tag>` — compares every cited line range at both tags and prints `DRIFT` (with candidate new line numbers) or `MISSING`; `verify_citations.sh` alone cannot see a file that changed above the cited line.
+
+### Fixed
+
+- `scripts/bump_kotlin_version.sh` now also re-pins `guide.md` permalinks and no longer rewrites historical rows in `README.md` / `CHANGELOG.md`. `CONTRIBUTING.md`'s version-bump procedure updated accordingly, including the zsh word-splitting pitfall that can make the cited-path diff look empty.
+- JDK 25 / BTAPI `JavaVersion.parse` note: `versions.intellijSdk` is unchanged at 2.4.20, so the workaround is kept; a naive reproduction (toolchain 21, daemon strategy) does not hit the failure on either 2.4.10 or 2.4.20, which is now recorded in EVIDENCE.
+
+### Validated against
+
+- Kotlin 2.4.20, Gradle 9.5.0, JDK 21 (plus JDK 25 launcher for the BTAPI probe).
+- `evaluation/` benchmarks were not re-run for this release; the affected guides were re-validated by source reading and by compiling the `MessageCollectorAccess` case. A future run against 2.4.20 is recommended before 0.4.0.
+
 ## [0.3.1] - 2026-09-10
 
 ### Changed

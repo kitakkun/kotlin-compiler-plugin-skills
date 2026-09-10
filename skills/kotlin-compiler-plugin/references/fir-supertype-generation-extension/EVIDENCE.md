@@ -5,7 +5,7 @@ Primary-source citations for claims in `guide.md`. All paths are rooted under `k
 ## `needTransformSupertypes(declaration)` signature
 
 ### Claim: `abstract fun needTransformSupertypes(declaration: FirClassLikeDeclaration): Boolean`
-- **File**: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt:26`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt#L26)
+- **File**: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt:26`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt#L26)
 - **Snippet**:
   ```kotlin
   abstract fun needTransformSupertypes(declaration: FirClassLikeDeclaration): Boolean
@@ -14,7 +14,7 @@ Primary-source citations for claims in `guide.md`. All paths are rooted under `k
 ## `computeAdditionalSupertypes(...)` signature
 
 ### Claim: returns `List<ConeKotlinType>` and takes `(FirClassLikeDeclaration, List<FirResolvedTypeRef>, TypeResolveService)`
-- **File**: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt:28-32`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt#L28-L32)
+- **File**: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt:28-32`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt#L28-L32)
 - **Snippet**:
   ```kotlin
   abstract fun computeAdditionalSupertypes(
@@ -27,7 +27,7 @@ Primary-source citations for claims in `guide.md`. All paths are rooted under `k
 ## `TypeResolveService.resolveUserType(...)` signature
 
 ### Claim: `TypeResolveService.resolveUserType(userType: FirUserTypeRef): FirResolvedTypeRef` is the only method on the service
-- **File**: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt:58-60`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt#L58-L60)
+- **File**: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt:58-60`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt#L58-L60)
 - **Snippet**:
   ```kotlin
   abstract class TypeResolveService {
@@ -38,7 +38,7 @@ Primary-source citations for claims in `guide.md`. All paths are rooted under `k
 ## `computeAdditionalSupertypesForGeneratedNestedClass` signature
 
 ### Claim: experimental hook for generated nested classes; default returns empty
-- **File**: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt:50-54`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt#L50-L54)
+- **File**: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt:50-54`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt#L50-L54)
 - **Snippet**:
   ```kotlin
   @ExperimentalSupertypesGenerationApi
@@ -49,7 +49,7 @@ Primary-source citations for claims in `guide.md`. All paths are rooted under `k
   ```
 
 ### Claim: limitations — one level only, doesn't work for top-level generated classes; default `Any` is removed if non-empty returned
-- **File**: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt:34-49`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt#L34-L49) (KDoc)
+- **File**: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt:34-49`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt#L34-L49) (KDoc)
 - **Snippet**:
   ```
   If some new types will be generated, then default `Any` supertype will be automatically removed
@@ -60,7 +60,7 @@ Primary-source citations for claims in `guide.md`. All paths are rooted under `k
 ## `@ExperimentalSupertypesGenerationApi` annotation (with `Level.ERROR`)
 
 ### Claim: opt-in annotation declared with `RequiresOptIn.Level.ERROR`
-- **File**: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt:65-66`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt#L65-L66)
+- **File**: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt:65-66`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirSupertypeGenerationExtension.kt#L65-L66)
 - **Snippet**:
   ```kotlin
   @RequiresOptIn("This API is experimental and works for a limited number of cases", level = RequiresOptIn.Level.ERROR)
@@ -69,8 +69,8 @@ Primary-source citations for claims in `guide.md`. All paths are rooted under `k
 
 ## `typeFromQualifierParts` location
 
-### Claim: in [`compiler/fir/resolve/src/.../RawUserTypeBuilder.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/RawUserTypeBuilder.kt), takes a `TypeResolveService` and returns `ConeKotlinType`
-- **File**: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/RawUserTypeBuilder.kt:31-43`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/RawUserTypeBuilder.kt#L31-L43)
+### Claim: in [`compiler/fir/resolve/src/.../RawUserTypeBuilder.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/RawUserTypeBuilder.kt), takes a `TypeResolveService` and returns `ConeKotlinType`
+- **File**: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/RawUserTypeBuilder.kt:31-43`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/RawUserTypeBuilder.kt#L31-L43)
 - **Snippet**:
   ```kotlin
   fun typeFromQualifierParts(
@@ -84,7 +84,7 @@ Primary-source citations for claims in `guide.md`. All paths are rooted under `k
 ## `AbstractSimpleClassPredicateMatchingService` location
 
 ### Claim: utility base class lives under `compiler/fir/providers/.../extensions/utils/`
-- **File**: [`kotlin/compiler/fir/providers/src/org/jetbrains/kotlin/fir/extensions/utils/AbstractSimpleClassPredicateMatchingService.kt:23`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/providers/src/org/jetbrains/kotlin/fir/extensions/utils/AbstractSimpleClassPredicateMatchingService.kt#L23)
+- **File**: [`kotlin/compiler/fir/providers/src/org/jetbrains/kotlin/fir/extensions/utils/AbstractSimpleClassPredicateMatchingService.kt:23`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/providers/src/org/jetbrains/kotlin/fir/extensions/utils/AbstractSimpleClassPredicateMatchingService.kt#L23)
 - **Snippet**:
   ```kotlin
   abstract class AbstractSimpleClassPredicateMatchingService(session: FirSession) : FirExtensionSessionComponent(session) {
@@ -96,21 +96,21 @@ Primary-source citations for claims in `guide.md`. All paths are rooted under `k
 ## `kotlinx-serialization` uses this extension
 
 ### Claim: `SerializationFirSupertypesExtension` extends `FirSupertypeGenerationExtension`
-- **File**: [`kotlin/plugins/kotlinx-serialization/kotlinx-serialization.k2/src/org/jetbrains/kotlinx/serialization/compiler/fir/SerializationFirSupertypesExtension.kt:36`](https://github.com/JetBrains/kotlin/blob/v2.4.10/plugins/kotlinx-serialization/kotlinx-serialization.k2/src/org/jetbrains/kotlinx/serialization/compiler/fir/SerializationFirSupertypesExtension.kt#L36)
+- **File**: [`kotlin/plugins/kotlinx-serialization/kotlinx-serialization.k2/src/org/jetbrains/kotlinx/serialization/compiler/fir/SerializationFirSupertypesExtension.kt:36`](https://github.com/JetBrains/kotlin/blob/v2.4.20/plugins/kotlinx-serialization/kotlinx-serialization.k2/src/org/jetbrains/kotlinx/serialization/compiler/fir/SerializationFirSupertypesExtension.kt#L36)
 - **Snippet**:
   ```kotlin
   class SerializationFirSupertypesExtension(session: FirSession) : FirSupertypeGenerationExtension(session) {
   ```
 
 ### Claim: kotlinx-serialization uses `typeFromQualifierParts`
-- **File**: [`kotlin/plugins/kotlinx-serialization/kotlinx-serialization.k2/src/org/jetbrains/kotlinx/serialization/compiler/fir/SerializationFirSupertypesExtension.kt:19`](https://github.com/JetBrains/kotlin/blob/v2.4.10/plugins/kotlinx-serialization/kotlinx-serialization.k2/src/org/jetbrains/kotlinx/serialization/compiler/fir/SerializationFirSupertypesExtension.kt#L19)
+- **File**: [`kotlin/plugins/kotlinx-serialization/kotlinx-serialization.k2/src/org/jetbrains/kotlinx/serialization/compiler/fir/SerializationFirSupertypesExtension.kt:19`](https://github.com/JetBrains/kotlin/blob/v2.4.20/plugins/kotlinx-serialization/kotlinx-serialization.k2/src/org/jetbrains/kotlinx/serialization/compiler/fir/SerializationFirSupertypesExtension.kt#L19)
 - **Snippet**:
   ```kotlin
   import org.jetbrains.kotlin.fir.extensions.typeFromQualifierParts
   ```
 
 ### Claim: kotlinx-serialization injects its `SerializerFactory` supertype **only** on non-JVM/Metadata targets (JS/Native/Wasm); JVM/Metadata get a different codegen path.
-- **File**: [`kotlin/plugins/kotlinx-serialization/kotlinx-serialization.k2/src/org/jetbrains/kotlinx/serialization/compiler/fir/SerializationFirSupertypesExtension.kt:38`](https://github.com/JetBrains/kotlin/blob/v2.4.10/plugins/kotlinx-serialization/kotlinx-serialization.k2/src/org/jetbrains/kotlinx/serialization/compiler/fir/SerializationFirSupertypesExtension.kt#L38)
+- **File**: [`kotlin/plugins/kotlinx-serialization/kotlinx-serialization.k2/src/org/jetbrains/kotlinx/serialization/compiler/fir/SerializationFirSupertypesExtension.kt:38`](https://github.com/JetBrains/kotlin/blob/v2.4.20/plugins/kotlinx-serialization/kotlinx-serialization.k2/src/org/jetbrains/kotlinx/serialization/compiler/fir/SerializationFirSupertypesExtension.kt#L38)
 - **Snippet**:
   ```kotlin
   private val isJvmOrMetadata = !session.moduleData.platform.run { isNative() || isJs() || isWasm() }
@@ -118,7 +118,7 @@ Primary-source citations for claims in `guide.md`. All paths are rooted under `k
   Then `isCompanionAndNeedsFactory(...)` immediately early-returns when `isJvmOrMetadata` is true (line 124). So the factory supertype is injected when the boolean is **false** — i.e. on JS/Native/Wasm only. guide.md previously framed this gating in the wrong direction.
 
 ### Claim: companion-of-annotated-parent matching pattern
-- **File**: [`kotlin/plugins/kotlinx-serialization/kotlinx-serialization.k2/src/org/jetbrains/kotlinx/serialization/compiler/fir/SerializationFirSupertypesExtension.kt:49-56`](https://github.com/JetBrains/kotlin/blob/v2.4.10/plugins/kotlinx-serialization/kotlinx-serialization.k2/src/org/jetbrains/kotlinx/serialization/compiler/fir/SerializationFirSupertypesExtension.kt#L49-L56)
+- **File**: [`kotlin/plugins/kotlinx-serialization/kotlinx-serialization.k2/src/org/jetbrains/kotlinx/serialization/compiler/fir/SerializationFirSupertypesExtension.kt:49-56`](https://github.com/JetBrains/kotlin/blob/v2.4.20/plugins/kotlinx-serialization/kotlinx-serialization.k2/src/org/jetbrains/kotlinx/serialization/compiler/fir/SerializationFirSupertypesExtension.kt#L49-L56)
 - **Snippet**:
   ```kotlin
   private fun isCompanionAndNeedsFactory(declaration: FirClassLikeDeclaration): Boolean {
@@ -135,7 +135,7 @@ Primary-source citations for claims in `guide.md`. All paths are rooted under `k
 
 ### Claim: Parcelize is not a user of `FirSupertypeGenerationExtension`
 - **Verification**: `grep -r "FirSupertypeGenerationExtension" kotlin/plugins/parcelize/` returns no matches.
-- **File**: [`kotlin/plugins/parcelize/parcelize-compiler/parcelize.k2/src/org/jetbrains/kotlin/parcelize/fir/FirParcelizeExtensionRegistrar.kt:18-23`](https://github.com/JetBrains/kotlin/blob/v2.4.10/plugins/parcelize/parcelize-compiler/parcelize.k2/src/org/jetbrains/kotlin/parcelize/fir/FirParcelizeExtensionRegistrar.kt#L18-L23)
+- **File**: [`kotlin/plugins/parcelize/parcelize-compiler/parcelize.k2/src/org/jetbrains/kotlin/parcelize/fir/FirParcelizeExtensionRegistrar.kt:18-23`](https://github.com/JetBrains/kotlin/blob/v2.4.20/plugins/parcelize/parcelize-compiler/parcelize.k2/src/org/jetbrains/kotlin/parcelize/fir/FirParcelizeExtensionRegistrar.kt#L18-L23)
 - **Snippet** (only declaration generator + checkers are registered; no supertype generator):
   ```kotlin
   override fun ExtensionRegistrarContext.configurePlugin() {

@@ -1,6 +1,6 @@
 ---
 name: compiler-plugin-testing
-description: "Test Kotlin compiler plugins with one of two infrastructures — (A) Gradle-based integration tests where `sample/` modules compile real source with `-Xplugin=` and assert on success/failure/output, or (B) JetBrains' official compiler test framework consumed via the published `kotlin-compiler-internal-test-framework` artifact, which enables FIR/IR-level fixture tests with `<!DIAGNOSTIC!>` markers, `fun box(): String`, `// FIR_DUMP`, `// DUMP_IR` and golden-file comparison. Read compiler-plugin-bootstrap first. NOT a tutorial on JUnit basics or third-party in-process compiler libraries."
+description: "Test Kotlin compiler plugins with one of two infrastructures — (A) Gradle-based integration tests where `sample/` modules compile real source with `-Xplugin=` and assert on success/failure/output, or (B) JetBrains' official compiler test framework consumed via the published `kotlin-compiler-internal-test-framework` artifact, which enables FIR/IR-level fixture tests with `<!DIAGNOSTIC!>` markers, `fun box(): String`, `// FIR_DUMP`, `// DUMP_IR` and golden-file comparison. Read compiler-plugin-bootstrap first. If the user reports `Unresolved reference 'AbstractFirBlackBoxCodegenTestBase'` or a test base class that vanished after a Kotlin bump, ALSO Read CHANGES.md in this skill's directory. NOT a tutorial on JUnit basics or third-party in-process compiler libraries."
 ---
 
 # Compiler Plugin Testing
@@ -61,7 +61,7 @@ include("plugin", "sample")
 
 ```kotlin
 plugins {
-    kotlin("jvm") version "2.4.10"
+    kotlin("jvm") version "2.4.20"
 }
 
 kotlin {
@@ -69,7 +69,7 @@ kotlin {
 }
 
 dependencies {
-    compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.4.10")
+    compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.4.20")
 }
 ```
 
@@ -81,7 +81,7 @@ For a plugin that emits custom diagnostics (checker), the goal is to verify that
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "2.4.10"
+    kotlin("jvm") version "2.4.20"
 }
 
 kotlin {
@@ -120,7 +120,7 @@ For a plugin that transforms code (generation, status change, call rewriting, et
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "2.4.10"
+    kotlin("jvm") version "2.4.20"
     application
 }
 
@@ -223,7 +223,7 @@ my-plugin/
 
 ```kotlin
 plugins {
-    kotlin("jvm") version "2.4.10"
+    kotlin("jvm") version "2.4.20"
     `java-test-fixtures`
 }
 
@@ -236,12 +236,12 @@ dependencies {
     // The official template uses `kotlin-compiler` for the plugin's compileOnly for this
     // reason. If you previously used `kotlin-compiler-embeddable` for Pattern A, switch to
     // `kotlin-compiler` when adopting Pattern B.
-    compileOnly("org.jetbrains.kotlin:kotlin-compiler:2.4.10")
+    compileOnly("org.jetbrains.kotlin:kotlin-compiler:2.4.20")
 
     // Test framework — testFixtures so test runners can be reused
-    testFixturesApi("org.jetbrains.kotlin:kotlin-test-junit5:2.4.10")
-    testFixturesApi("org.jetbrains.kotlin:kotlin-compiler-internal-test-framework:2.4.10")
-    testFixturesApi("org.jetbrains.kotlin:kotlin-compiler:2.4.10")
+    testFixturesApi("org.jetbrains.kotlin:kotlin-test-junit5:2.4.20")
+    testFixturesApi("org.jetbrains.kotlin:kotlin-compiler-internal-test-framework:2.4.20")
+    testFixturesApi("org.jetbrains.kotlin:kotlin-compiler:2.4.20")
     testFixturesRuntimeOnly("junit:junit:4.13.2")  // JUnit 4 also needed at runtime
 }
 
@@ -264,12 +264,12 @@ The framework looks up stdlib / reflect / kotlin-test JARs by absolute path via 
 val testArtifacts: Configuration by configurations.creating
 
 dependencies {
-    testArtifacts("org.jetbrains.kotlin:kotlin-stdlib:2.4.10")
-    testArtifacts("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.4.10")
-    testArtifacts("org.jetbrains.kotlin:kotlin-reflect:2.4.10")
-    testArtifacts("org.jetbrains.kotlin:kotlin-test:2.4.10")
-    testArtifacts("org.jetbrains.kotlin:kotlin-script-runtime:2.4.10")
-    testArtifacts("org.jetbrains.kotlin:kotlin-annotations-jvm:2.4.10")
+    testArtifacts("org.jetbrains.kotlin:kotlin-stdlib:2.4.20")
+    testArtifacts("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.4.20")
+    testArtifacts("org.jetbrains.kotlin:kotlin-reflect:2.4.20")
+    testArtifacts("org.jetbrains.kotlin:kotlin-test:2.4.20")
+    testArtifacts("org.jetbrains.kotlin:kotlin-script-runtime:2.4.20")
+    testArtifacts("org.jetbrains.kotlin:kotlin-annotations-jvm:2.4.20")
 }
 
 tasks.test {
@@ -305,7 +305,7 @@ setLibraryProperty("my.plugin.runtime", "my-plugin-runtime-jvm")
 
 ### Test runner classes (in `test-fixtures/`)
 
-A diagnostic test runner extends `AbstractFirPhasedDiagnosticTest`; a box test runner extends `AbstractFirBlackBoxCodegenTestBase`. Both classes come from the test framework artifact. Imports are elided in the snippets below; the most commonly needed ones live in these packages:
+A diagnostic test runner extends `AbstractFirPhasedDiagnosticTest`; a box test runner extends `AbstractJvmBlackBoxCodegenTestBase(parser: FirParser)`. Both classes come from the test framework artifact. On Kotlin ≤ 2.4.10 the box base was named `AbstractFirBlackBoxCodegenTestBase` (same constructor shape); 2.4.20 deleted that class and folded it into `AbstractJvmBlackBoxCodegenTestBase`; the official `compiler-plugin-template` still names the old class, so do not copy that line from it — see `CHANGES.md` for the one-line migration. Imports are elided in the snippets below; the most commonly needed ones live in these packages:
 
 | Type | Package |
 |---|---|
@@ -314,7 +314,7 @@ A diagnostic test runner extends `AbstractFirPhasedDiagnosticTest`; a box test r
 | `FirDiagnosticsDirectives`, `JvmEnvironmentConfigurationDirectives`, `CodegenTestDirectives`, `TestPhaseDirectives` (`RUN_PIPELINE_TILL`) | `org.jetbrains.kotlin.test.directives` |
 | `TestPhase` (`FRONTEND` / `FIR2IR` / `BACKEND`) | `org.jetbrains.kotlin.test.services` |
 | `AbstractFirPhasedDiagnosticTest` | `org.jetbrains.kotlin.test.runners` |
-| `AbstractFirBlackBoxCodegenTestBase` | `org.jetbrains.kotlin.test.runners.codegen` |
+| `AbstractJvmBlackBoxCodegenTestBase` | `org.jetbrains.kotlin.test.runners.codegen` |
 | `EnvironmentBasedStandardLibrariesPathProvider`, `KotlinStandardLibrariesPathProvider`, `EnvironmentConfigurator`, `TestServices`, `TestModule` | `org.jetbrains.kotlin.test.services` |
 | `CompilerPluginRegistrar` | `org.jetbrains.kotlin.compiler.plugin` |
 | `CompilerConfiguration` | `org.jetbrains.kotlin.config` |
@@ -323,16 +323,16 @@ A diagnostic test runner extends `AbstractFirPhasedDiagnosticTest`; a box test r
 
 The official template's `compiler-plugin/test-fixtures/.../runners/*.kt` files have the exact import lists for the Kotlin version it tracks; treat the table above as a starting cheat sheet rather than an exhaustive list.
 
-**`configure` vs `configuration` — same prefix, different members.** `AbstractKotlinCompilerTest` ([source](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/AbstractKotlinCompilerTest.kt)) declares both:
+**`configure` vs `configuration` — same prefix, different members.** `AbstractKotlinCompilerTest` ([source](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/AbstractKotlinCompilerTest.kt)) declares both:
 
 ```kotlin
 protected val configuration: TestConfigurationBuilder.() -> Unit = { … }   // a property of lambda type
 abstract fun configure(builder: TestConfigurationBuilder)                  // the user hook
 ```
 
-`configure(builder)` is **abstract** and is the documented main hook — its own KDoc reads *"This is the main method to declare the test configuration."* That's where you add directives, configurators, and call `super.configure(builder)`. The intermediate `Abstract*` superclass (e.g. `AbstractFirBlackBoxCodegenTestBase`) implements `configure` and expects you to override it again. The `configuration` *property* is a lambda built up by the framework and consumed by `runTest`; you don't override it. Mistyping `override fun configuration(...)` produces `'configuration' overrides nothing` (it's a `val`, not a `fun`), and using an `override val configuration = { … }` clobbers the framework's pre-test setup. Always extend through `configure`.
+`configure(builder)` is **abstract** and is the documented main hook — its own KDoc reads *"This is the main method to declare the test configuration."* That's where you add directives, configurators, and call `super.configure(builder)`. The intermediate `Abstract*` superclass (e.g. `AbstractJvmBlackBoxCodegenTestBase`) implements `configure` and expects you to override it again. The `configuration` *property* is a lambda built up by the framework and consumed by `runTest`; you don't override it. Mistyping `override fun configuration(...)` produces `'configuration' overrides nothing` (it's a `val`, not a `fun`), and using an `override val configuration = { … }` clobbers the framework's pre-test setup. Always extend through `configure`.
 
-**Pick the abstract `*Base` class, not a concrete leaf runner.** The framework ships both `AbstractFirBlackBoxCodegenTestBase(parser: FirParser)` (and its diagnostic counterpart) *and* concrete subclasses like `AbstractFirLightTreeBlackBoxCodegenTest` / `AbstractFirPsiBlackBoxCodegenTest` that pin the parser. Empirically, extending one of those concrete leaf classes as the parent of your own `AbstractMyXxxTest` makes the `generateTestGroupSuiteWithJUnit5` generator throw an `IllegalArgumentException` of the shape *"Test runner AbstractMyBoxTest which inherits from RunnerWithTargetBackendForTestGeneratorMarker and used as base class"* — the leaf classes implement that marker interface as JetBrains-internal scaffolding for their own test generator and aren't intended for re-extension. Extend the `*Base` class instead and pass `FirParser.LightTree` (or `Psi`) as a constructor argument, as below.
+**Pick the abstract `*Base` class, not a concrete leaf runner.** The framework ships both `AbstractJvmBlackBoxCodegenTestBase(parser: FirParser)` (and its diagnostic counterpart) *and* concrete subclasses like `AbstractFirLightTreeBlackBoxCodegenTest` / `AbstractFirPsiBlackBoxCodegenTest` that pin the parser. Empirically, extending one of those concrete leaf classes as the parent of your own `AbstractMyXxxTest` makes the `generateTestGroupSuiteWithJUnit5` generator throw an `IllegalArgumentException` of the shape *"Test runner AbstractMyBoxTest which inherits from RunnerWithTargetBackendForTestGeneratorMarker and used as base class"* — the leaf classes implement that marker interface as JetBrains-internal scaffolding for their own test generator and aren't intended for re-extension. Extend the `*Base` class instead and pass `FirParser.LightTree` (or `Psi`) as a constructor argument, as below.
 
 **`createKotlinStandardLibrariesPathProvider` — overriding a single method requires re-implementing every abstract one.** `EnvironmentBasedStandardLibrariesPathProvider` is the supplied implementation and is the right return value for typical use. If you need to substitute just one path (e.g. point `minimalRuntimeJarForTests()` at a custom jar), `KotlinStandardLibrariesPathProvider` is abstract with ~12 methods — you can't subclass and override one. Use a delegating wrapper:
 
@@ -384,11 +384,11 @@ open class AbstractJvmDiagnosticTest : AbstractFirPhasedDiagnosticTest(FirParser
 }
 ```
 
-**`RUN_PIPELINE_TILL` is mandatory for diagnostic tests on Kotlin 2.4.** The framework's `PhasedPipelineChecker` (`compiler/tests-common-new/.../services/PhasedPipelineChecker.kt`) fails any run that doesn't declare a phase, with `AssertionFailedError: Please specify the test phase in "// RUN_PIPELINE_TILL" directive`. The official `compiler-plugin-template` runner does **not** set it, so it's an easy trap. `TestPhase` (in `org.jetbrains.kotlin.test.services`) has `FRONTEND`, `FIR2IR`, `BACKEND`; `RUN_PIPELINE_TILL` and `TestPhase` live in `org.jetbrains.kotlin.test.directives` / `...services`. You can set it per-test instead with a `// RUN_PIPELINE_TILL: FRONTEND` line at the top of an individual `testData/*.kt` file, but putting it in the runner's `defaultDirectives` covers every diagnostic fixture at once.
+**`RUN_PIPELINE_TILL` is mandatory for diagnostic tests on Kotlin 2.4.** The framework's `PhasedPipelineChecker` (`compiler/tests-common-new/.../services/PhasedPipelineChecker.kt`; registered through `useFailureSuppressors` since 2.4.20, `useAfterAnalysisCheckers` before) fails any run that doesn't declare a phase, with ``AssertionFailedError: Please specify the test phase in `// RUN_PIPELINE_TILL` directive``. The official `compiler-plugin-template` runner does **not** set it, so it's an easy trap. `TestPhase` (in `org.jetbrains.kotlin.test.services`) has `FRONTEND`, `FIR2IR`, `BACKEND`; `RUN_PIPELINE_TILL` and `TestPhase` live in `org.jetbrains.kotlin.test.directives` / `...services`. You can set it per-test instead with a `// RUN_PIPELINE_TILL: FRONTEND` line at the top of an individual `testData/*.kt` file, but putting it in the runner's `defaultDirectives` covers every diagnostic fixture at once.
 
 ```kotlin
 // test-fixtures/.../runners/AbstractJvmBoxTest.kt
-open class AbstractJvmBoxTest : AbstractFirBlackBoxCodegenTestBase(FirParser.LightTree) {
+open class AbstractJvmBoxTest : AbstractJvmBlackBoxCodegenTestBase(FirParser.LightTree) {
     override fun createKotlinStandardLibrariesPathProvider() =
         EnvironmentBasedStandardLibrariesPathProvider
 
@@ -581,7 +581,7 @@ Symptom: tests fail before any test data is loaded with errors mentioning `idea.
 
 ### B: framework breaks after a Kotlin version bump
 
-Abstract test bases have been renamed across patch releases (e.g. the `*FirBlackBox*` base shifted between `runners.codegen` and `runners.ir.codegen`). Treat the test runner classes as version-pinned. When bumping Kotlin, also bump every `2.3.x` coordinate in the test wiring together and recompile `test-fixtures/` first.
+Abstract test bases have been renamed across patch releases (e.g. `AbstractFirBlackBoxCodegenTestBase` became `AbstractJvmBlackBoxCodegenTestBase` in 2.4.20, and earlier the `*FirBlackBox*` base shifted between `runners.codegen` and `runners.ir.codegen`). Treat the test runner classes as version-pinned. When bumping Kotlin, also bump every Kotlin coordinate in the test wiring together and recompile `test-fixtures/` first.
 
 ## Relation to other skills
 

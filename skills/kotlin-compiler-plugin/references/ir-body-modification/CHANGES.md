@@ -1,6 +1,6 @@
 # Changes affecting this skill
 
-API migrations relevant to modifying function bodies in IR. This skill targets the **current stable Kotlin** (2.4.0).
+API migrations relevant to modifying function bodies in IR. This skill targets the **current stable Kotlin** (2.4.20).
 
 ## Kotlin 2.3 → 2.4: `IrFunction` parameter accessors removed / read-only
 

@@ -1,15 +1,15 @@
 ---
 name: fir-declaration-generation-extension
-description: Synthesise FIR-level declarations (classes, functions, properties, constructors, companion objects) visible to source code via FirDeclarationGenerationExtension. Use when a plugin needs to inject members or types that the user can refer to from their Kotlin source — kotlinx-serialization's KSerializer, Compose's stable annotations, parcelize's writeToParcel, lombok's @Data members. Read fir-extensions-overview and fir-predicate-system first. NOT for backend code generation (see ir-* skills) or for adding supertypes only (see fir-supertype-generation-extension).
+description: Synthesise FIR-level declarations (classes, functions, properties, constructors, companion objects) visible to source code via FirDeclarationGenerationExtension. Use when a plugin needs to inject members or types that the user can refer to from their Kotlin source — kotlinx-serialization's KSerializer, Compose's stable annotations, parcelize's writeToParcel, lombok's @Data members. Read fir-extensions-overview and fir-predicate-system first. If the user is upgrading across Kotlin 2.4.20 and sees FIR-dump origin labels change, relies on `generateDelegatedNoArgConstructorCall = true` throwing, or asks about `generateFields`, ALSO Read CHANGES.md in this skill's directory. NOT for backend code generation (see ir-* skills) or for adding supertypes only (see fir-supertype-generation-extension).
 ---
 
 # FirDeclarationGenerationExtension
 
 The K2 extension point that adds **synthetic declarations** the rest of the frontend treats as if the user had written them. Use it when **source code in the same module** needs to reference plugin-generated members.
 
-> **Source-visibility scope** — declarations created by this extension are visible to source code *within the module being compiled*. To make a synthetic member referenceable from a *downstream* module that depends on the current one, that's a different mechanism: generate at IR stage and call `pluginContext.metadataDeclarationRegistrar.registerFunctionAsMetadataVisible(...)` (see [`ir-plugincontext-usage`](../ir-plugincontext-usage/guide.md)). Notably, IR-side generation + metadata registration is the kotlinx-serialization "write$Self" pattern: visible from downstream modules, but *not* visible to source within the same module — the asymmetry is intentional. Empirically verified end-to-end: a function added only via `IrFactory.addFunction` + `registerFunctionAsMetadataVisible` resolves from another module's source but stays unresolved within the originating module.
+> **Source-visibility scope** — declarations created by this extension are visible to source code *within the module being compiled*. To make a synthetic member referenceable from a *downstream* module that depends on the current one, that's a different mechanism: generate at IR stage and call `pluginContext.metadataDeclarationRegistrar.registerFunctionAsMetadataVisible(...)` (or, since Kotlin 2.4.20, `registerClassAsMetadataVisible(...)` / `registerPropertyAsMetadataVisible(...)`) (see [`ir-plugincontext-usage`](../ir-plugincontext-usage/guide.md)). Notably, IR-side generation + metadata registration is the kotlinx-serialization "write$Self" pattern: visible from downstream modules, but *not* visible to source within the same module — the asymmetry is intentional. Empirically verified end-to-end: a function added only via `IrFactory.addFunction` + `registerFunctionAsMetadataVisible` resolves from another module's source but stays unresolved within the originating module.
 
-Source: [`kotlin/compiler/fir/providers/src/org/jetbrains/kotlin/fir/extensions/FirDeclarationGenerationExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/providers/src/org/jetbrains/kotlin/fir/extensions/FirDeclarationGenerationExtension.kt).
+Source: [`kotlin/compiler/fir/providers/src/org/jetbrains/kotlin/fir/extensions/FirDeclarationGenerationExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/providers/src/org/jetbrains/kotlin/fir/extensions/FirDeclarationGenerationExtension.kt).
 
 ## What you can generate
 
@@ -20,6 +20,8 @@ Source: [`kotlin/compiler/fir/providers/src/org/jetbrains/kotlin/fir/extensions/
 | `generateProperties(callableId, context)` | Properties on a class or top-level | callable name list |
 | `generateConstructors(context)` | Constructors on a class | callable names containing `SpecialNames.INIT` |
 | `generateTopLevelClassLikeDeclaration(classId)` | A top-level class (experimental) | top-level class id list |
+
+There is also `generateFields(callableId, context): List<FirFieldSymbol>` (added in Kotlin 2.4.20). It is gated by `@UnsafePluginApi` and its KDoc says it is "designed for Java interop (to generate Java fields) and not useful for general plugins" — leave it alone unless you are synthesizing Java-style fields (the Lombok plugin is the intended consumer). Kotlin properties go through `generateProperties`.
 
 Each `generate*` method has a paired **discovery** method that tells the FIR pipeline *which names you intend to generate*; the pipeline then calls `generate*` for those names only:
 
@@ -57,12 +59,10 @@ package com.example.gen.fir
 
 import org.jetbrains.kotlin.GeneratedDeclarationKey
 
-object MyGeneratedDeclarationKey : GeneratedDeclarationKey() {
-    override fun toString() = "MyMarkerPlugin"
-}
+object MyGeneratedDeclarationKey : GeneratedDeclarationKey()
 ```
 
-`GeneratedDeclarationKey` is the marker that downstream IR transforms / checkers recognise to identify "this declaration came from my plugin". Use one per plugin.
+`GeneratedDeclarationKey` is the marker that downstream IR transforms / checkers recognise to identify "this declaration came from my plugin". Use one per plugin. Since Kotlin 2.4.20 the base class overrides `toString()` to return the key's simple class name (`MyGeneratedDeclarationKey` here), so FIR dumps show `Plugin[MyGeneratedDeclarationKey]` deterministically; you only need your own `toString()` override if you want a different label (on 2.4.10 and earlier, an un-overridden key printed as an identity hash).
 
 ### 3. Predicate (set of triggering classes)
 
@@ -134,7 +134,7 @@ class MyGenerator(session: FirSession) : FirDeclarationGenerationExtension(sessi
 
 `createMemberFunction(...)` is from `compiler/fir/plugin-utils/`. Sister helpers: `createTopLevelFunction`, `createMemberProperty`, `createTopLevelProperty`, `createConstructor`, `createNestedClass`, `createTopLevelClass`. Each takes the `key` (your `GeneratedDeclarationKey`) so the resulting FIR symbol carries `origin = key.origin` (a `FirDeclarationOrigin.Plugin` whose `key` field is your `GeneratedDeclarationKey`). The IR-side counterpart, when the declaration reaches IR, is `IrDeclarationOrigin.GeneratedByPlugin(yourKey)` — same key bridges both.
 
-The most common helper signatures at v2.3.21 (all under `org.jetbrains.kotlin.fir.plugin`; receiver is `FirExtension`, which `FirDeclarationGenerationExtension` inherits from, so they are callable from inside any subclass body):
+The most common helper signatures at v2.4.20 (all under `org.jetbrains.kotlin.fir.plugin`; receiver is `FirExtension`, which `FirDeclarationGenerationExtension` inherits from, so they are callable from inside any subclass body):
 
 ```kotlin
 fun FirExtension.createMemberFunction(
@@ -164,6 +164,14 @@ fun FirExtension.createMemberProperty(
 ```
 
 Note that `createConstructor`'s `generateDelegatedNoArgConstructorCall` defaults to `false` — if you generate a non-primary constructor whose enclosing class inherits from a class with no no-arg superconstructor, you must either flip this to `true` *only* when a no-arg supertype constructor actually exists, or emit the delegating call yourself in `config`. Leaving the default and silently producing a body-less constructor is the usual cause of `IllegalStateException: not generated yet` at codegen time.
+
+Since Kotlin 2.4.20, `generateDelegatedNoArgConstructorCall = true` is best-effort: when the superclass (first `ClassKind.CLASS` supertype, or `kotlin.Any`) has no zero-parameter constructor, the helper leaves the delegated call `null` instead of throwing `error("No arguments constructor for class ... not found")` as 2.4.10 did. Decide up front whether such a call is possible with the public helper the same code path uses, and skip the constructor (or build the delegating call yourself) when it returns `null`:
+
+```kotlin
+import org.jetbrains.kotlin.fir.plugin.tryGeneratingNoArgDelegatingConstructorCall
+
+val canDelegate = owner.tryGeneratingNoArgDelegatingConstructorCall(session) != null
+```
 
 Each `*BuildingContext` exposes lists like `typeParameters`, `valueParameters`, `modality`, `visibility` etc. that you mutate inside the `config` lambda.
 

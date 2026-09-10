@@ -5,9 +5,9 @@ description: Replace a Kotlin variable assignment (`x = value`) with an arbitrar
 
 # FirAssignExpressionAltererExtension
 
-This is the K2 extension point that hijacks `=` **on property assignments** — for any `lhs = rhs` where `lhs` resolves to a property (member or top-level), the extension can return a replacement statement (typically `lhs.assign(rhs)` or any other rewriting). The canonical production user is the **Kotlin Assignment Compiler Plugin** ([`plugins/assign-plugin/`](https://github.com/JetBrains/kotlin/tree/v2.4.10/plugins/assign-plugin) in JetBrains/kotlin) — applied in Gradle build scripts to enable the lazy-property idiom `task.input = "OK"` (rewritten to `task.input.assign("OK")`) for Gradle's `Property<T>` API. The plugin is JetBrains-maintained; Gradle is a downstream consumer that opts in via the `kotlin-assignment` Kotlin Gradle plugin.
+This is the K2 extension point that hijacks `=` **on property assignments** — for any `lhs = rhs` where `lhs` resolves to a property (member or top-level), the extension can return a replacement statement (typically `lhs.assign(rhs)` or any other rewriting). The canonical production user is the **Kotlin Assignment Compiler Plugin** ([`plugins/assign-plugin/`](https://github.com/JetBrains/kotlin/tree/v2.4.20/plugins/assign-plugin) in JetBrains/kotlin) — applied in Gradle build scripts to enable the lazy-property idiom `task.input = "OK"` (rewritten to `task.input.assign("OK")`) for Gradle's `Property<T>` API. The plugin is JetBrains-maintained; Gradle is a downstream consumer that opts in via the `kotlin-assignment` Kotlin Gradle plugin.
 
-Source: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirAssignExpressionAltererExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirAssignExpressionAltererExtension.kt).
+Source: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirAssignExpressionAltererExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirAssignExpressionAltererExtension.kt).
 
 ## What you get
 
@@ -173,7 +173,7 @@ Context parameters silently get dropped if you don't propagate `contextArguments
 
 ### Resolver only calls the extension when the LHS is resolved
 
-The resolver guards the alterer dispatch inline inside `transformVariableAssignment` behind `if (assignAltererExtensions != null && resolvedReference is FirResolvedNamedReference)` (`FirExpressionsResolveTransformer.kt:1323-1357` at v2.3.21). When the LHS is broken (typo on the property name etc.), the extension is **not** invoked, so you don't need to defend against `FirErrorNamedReference`. The `?.toResolvedVariableSymbol() as? FirRegularPropertySymbol ?: return null` chain is still a useful belt-and-braces guard against an unexpected symbol shape, just not because the reference could be erroneous.
+The resolver guards the alterer dispatch inline inside `transformVariableAssignment` behind `if (assignAltererExtensions != null && resolvedReference is FirResolvedNamedReference)` (`FirExpressionsResolveTransformer.kt:1625-1656` at v2.4.20). When the LHS is broken (typo on the property name etc.), the extension is **not** invoked, so you don't need to defend against `FirErrorNamedReference`. The `?.toResolvedVariableSymbol() as? FirRegularPropertySymbol ?: return null` chain is still a useful belt-and-braces guard against an unexpected symbol shape, just not because the reference could be erroneous.
 
 ### No way to alter `+=` / `-=`
 

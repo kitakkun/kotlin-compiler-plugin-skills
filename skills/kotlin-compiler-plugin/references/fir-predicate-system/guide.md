@@ -7,7 +7,7 @@ description: Use Kotlin K2's declarative predicate DSL to match annotated declar
 
 A FIR extension that does *anything* annotation-driven (e.g. "for every `@Serializable` class, …") should use the predicate system rather than walking annotations manually. Predicates are declared up-front by each extension; the FIR pipeline indexes annotated declarations once and answers `matches`/`getSymbolsByPredicate` in O(1) per hit.
 
-Source: [`kotlin/compiler/fir/tree/src/org/jetbrains/kotlin/fir/extensions/predicate/`](https://github.com/JetBrains/kotlin/tree/v2.4.10/compiler/fir/tree/src/org/jetbrains/kotlin/fir/extensions/predicate).
+Source: [`kotlin/compiler/fir/tree/src/org/jetbrains/kotlin/fir/extensions/predicate/`](https://github.com/JetBrains/kotlin/tree/v2.4.20/compiler/fir/tree/src/org/jetbrains/kotlin/fir/extensions/predicate).
 
 ## Two predicate flavours
 
@@ -169,7 +169,7 @@ val LOOKUP_FOR_GENERATOR: LookupPredicate = LookupPredicate.create {
 
 Use `DeclarationPredicate` for `matches`, `LookupPredicate` for `getSymbolsByPredicate`. Both `BuilderContext`s are nearly identical, so converting between them is mechanical.
 
-**The "two predicates over the same FQN" convention.** What gets registered and what gets queried are two different objects. `FirDeclarationPredicateRegistrar.register(vararg predicates: AbstractPredicate<*>)` takes the common base of both predicate kinds (see [`FirExtension.kt:42-45`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/tree/src/org/jetbrains/kotlin/fir/extensions/FirExtension.kt#L42-L45)), so either flavour can be passed and either causes the FQNs in `predicate.annotations` to land in the session-wide index. What actually breaks is the *query* side — `getSymbolsByPredicate(...)` requires a `LookupPredicate`, and `matches(...)` consumes a `DeclarationPredicate`. The conventional pattern, used by allopen / noarg / kotlinx-serialization, is therefore:
+**The "two predicates over the same FQN" convention.** What gets registered and what gets queried are two different objects. `FirDeclarationPredicateRegistrar.register(vararg predicates: AbstractPredicate<*>)` takes the common base of both predicate kinds (see [`FirExtension.kt:42-45`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/tree/src/org/jetbrains/kotlin/fir/extensions/FirExtension.kt#L42-L45)), so either flavour can be passed and either causes the FQNs in `predicate.annotations` to land in the session-wide index. What actually breaks is the *query* side — `getSymbolsByPredicate(...)` requires a `LookupPredicate`, and `matches(...)` consumes a `DeclarationPredicate`. The conventional pattern, used by allopen / noarg / kotlinx-serialization, is therefore:
 
 ```kotlin
 import org.jetbrains.kotlin.fir.extensions.FirDeclarationPredicateRegistrar
@@ -212,7 +212,7 @@ Build predicates from a non-empty annotation list, even if your "list" is comput
 
 ### `matches` returns false for synthetic declarations
 
-`FirPredicateBasedProviderImpl.matches` checks the declaration's *own* annotation list (see [`compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirPredicateBasedProviderImpl.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirPredicateBasedProviderImpl.kt) — `visitAnnotatedWith` calls `matchWith(data, predicate.annotations)`). The `*BuildingContext` helpers in `FirDeclarationGenerationExtension` don't copy annotations from the originating user declaration, so plugin-synthesised declarations carry an empty `annotations` list by default and won't match an `annotated(FQN)` predicate. Either attach the annotation explicitly when generating, or short-circuit by checking `declaration.origin is FirDeclarationOrigin.Plugin` before querying the predicate.
+`FirPredicateBasedProviderImpl.matches` checks the declaration's *own* annotation list (see [`compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirPredicateBasedProviderImpl.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirPredicateBasedProviderImpl.kt) — `visitAnnotatedWith` calls `matchWith(data, predicate.annotations)`). The `*BuildingContext` helpers in `FirDeclarationGenerationExtension` don't copy annotations from the originating user declaration, so plugin-synthesised declarations carry an empty `annotations` list by default and won't match an `annotated(FQN)` predicate. Either attach the annotation explicitly when generating, or short-circuit by checking `declaration.origin is FirDeclarationOrigin.Plugin` before querying the predicate.
 
 ### `parentAnnotated` vs `ancestorAnnotated`
 
