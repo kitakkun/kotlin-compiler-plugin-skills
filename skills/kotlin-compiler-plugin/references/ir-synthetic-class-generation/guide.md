@@ -39,7 +39,7 @@ Once you've located the FIR-generated class, all the heavy lifting (fields, cons
 
 ## IR-only pattern (last resort)
 
-If you genuinely need an IR-only class — no FIR declaration, no source visibility — the steps are:
+If you genuinely need an IR-only class — no FIR declaration, so no source visibility *inside the module that generates it* (and, before Kotlin 2.4.20, none anywhere; since 2.4.20 a single `registerClassAsMetadataVisible` call in step 6 makes it visible to downstream modules) — the steps are:
 
 ### 1. Construct the IrClass
 

@@ -25,20 +25,21 @@ Tools API with the **Kotlin compile daemon** strategy (`--debug` log shows `v: t
 
 ### Claim 1 — negative case (opt-in temporarily removed, then restored)
 
-`@OptIn(ExperimentalCompilerApi::class, MessageCollectorAccess::class)` was changed to `@OptIn(ExperimentalCompilerApi::class)`:
+The `MessageCollectorAccess` opt-in is scoped to a single private accessor function; the registrar class itself
+carries only `@OptIn(ExperimentalCompilerApi::class)`. Deleting the accessor's `@OptIn(MessageCollectorAccess::class)`
+line:
 
 ```
 $ ../gradlew --no-daemon -q clean :plugin:compileKotlin
-e: file:///.../plugin/src/main/kotlin/com/example/mca/MessageCollectorAccessComponentRegistrar.kt:34:46 Direct access to the message collector is discouraged. Consider using `CompilerConfiguration.report`.
-FAILURE: Build failed with an exception.
-* What went wrong:
-Execution failed for task ':plugin:compileKotlin' (registered by plugin 'org.jetbrains.kotlin.jvm').
-   > Compilation error. See log for more details
+e: file:///.../plugin/src/main/kotlin/com/example/mca/MessageCollectorAccessComponentRegistrar.kt:24:19 Direct access to the message collector is discouraged. Consider using `CompilerConfiguration.report`.
+BUILD FAILED
 ```
 
-Line 34:46 is the `configuration.messageCollector` read. The error is emitted by the plugin module's own
-compilation (it is an opt-in error at level ERROR), exactly as the guides claim. The opt-in was then restored
-and the positive build re-run.
+Line 24:19 is the `configuration.messageCollector` read inside `obtainMessageCollector`. It is the **only** error:
+the `reportInfo` / `reportLog` / `report(...)` calls in the registrar (which never had the opt-in in scope) compile
+cleanly, which is what proves claim 3 rather than merely asserting it. The error is emitted by the plugin module's
+own compilation (an opt-in error at level ERROR), exactly as the guides claim. The opt-in was then restored and the
+positive build re-run.
 
 ### Claim 3 — the opt-in-free `org.jetbrains.kotlin.cli` helpers
 
@@ -75,7 +76,12 @@ whereas `messageCollector.report(...)` / `reportInfo` / `reportLog` write to the
 `plugin/src/main/kotlin/com/example/mca/MessageCollectorAccessComponentRegistrar.kt`:
 
 ```kotlin
-@OptIn(ExperimentalCompilerApi::class, MessageCollectorAccess::class)
+// The opt-in lives on this one accessor; nothing else in the file has it in scope.
+@OptIn(MessageCollectorAccess::class)
+private fun obtainMessageCollector(configuration: CompilerConfiguration): MessageCollector =
+    configuration.messageCollector
+
+@OptIn(ExperimentalCompilerApi::class)
 class MessageCollectorAccessComponentRegistrar : CompilerPluginRegistrar() {
     override val pluginId: String = "com.example.mca.message-collector-access"
     override val supportsK2: Boolean = true
@@ -88,7 +94,7 @@ class MessageCollectorAccessComponentRegistrar : CompilerPluginRegistrar() {
             "15-mca: report(COMPILER_PLUGIN_INITIALIZATION_WARNING) from registrar",
         )
 
-        val messageCollector = configuration.messageCollector
+        val messageCollector = obtainMessageCollector(configuration)
         messageCollector.report(CompilerMessageSeverity.WARNING, "15-mca: hello from registrar")
         IrGenerationExtension.registerExtension(HelloIrGenerationExtension(messageCollector))
     }
