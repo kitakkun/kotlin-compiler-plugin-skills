@@ -37,8 +37,18 @@ NEW_VER=${NEW#v}
 REPO_ROOT=$(git rev-parse --show-toplevel)
 cd "$REPO_ROOT"
 
+# In-place sed that works with both GNU sed (Linux) and BSD sed (macOS):
+# GNU accepts `-i` with no suffix, BSD requires an explicit (empty) suffix.
+if sed --version >/dev/null 2>&1; then
+  sed_inplace() { sed -i "$@"; }
+else
+  sed_inplace() { sed -i '' "$@"; }
+fi
+
 find skills -type f \( -name SKILL.md -o -name guide.md -o -name EVIDENCE.md \) -print0 | \
-  xargs -0 sed -i '' "s|/blob/${OLD}/|/blob/${NEW}/|g; s|/tree/${OLD}/|/tree/${NEW}/|g"
+  while IFS= read -r -d '' f; do
+    sed_inplace "s|/blob/${OLD}/|/blob/${NEW}/|g; s|/tree/${OLD}/|/tree/${NEW}/|g" "$f"
+  done
 
 echo "Re-pinned permalinks ${OLD} → ${NEW} in skills/**/{SKILL,guide,EVIDENCE}.md."
 echo "NOT touched: CHANGES.md, README.md, CHANGELOG.md, evaluation/, verification/."
