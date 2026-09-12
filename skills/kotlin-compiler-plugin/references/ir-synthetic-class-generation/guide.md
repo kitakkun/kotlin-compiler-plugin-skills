@@ -62,9 +62,30 @@ val newClass = factory.buildClass {
 
 `pluginContext.irFactory` is the modern factory. The `buildClass { ... }` DSL is in `org.jetbrains.kotlin.ir.builders.declarations`.
 
-### 2. Add a constructor
+### 2. Add fields
 
-**Order note:** if the constructor initializes a field — the normal shape for a holder / data-carrier class — build the property and its backing field (step 3) *before* the constructor, because the constructor body references the `IrField`. The snippet below assumes `nameField` from step 3 already exists; for a no-arg class drop the `addValueParameter` and `irSetField` lines.
+```kotlin
+import org.jetbrains.kotlin.ir.builders.declarations.addBackingField
+import org.jetbrains.kotlin.ir.builders.declarations.addDefaultGetter
+import org.jetbrains.kotlin.ir.builders.declarations.addProperty
+
+val nameProperty = newClass.addProperty {
+    name = Name.identifier("name")
+    visibility = DescriptorVisibilities.PUBLIC
+    modality = Modality.FINAL
+}
+val nameField = nameProperty.addBackingField {
+    type = pluginContext.irBuiltIns.stringType
+    isFinal = true
+}
+nameProperty.addDefaultGetter(newClass, pluginContext.irBuiltIns)
+```
+
+Properties typically need a backing field plus a getter (and a setter for `var`s). All three helpers live in `org.jetbrains.kotlin.ir.builders.declarations`. `addProperty` appends the property to `newClass.declarations` and sets its `parent`; `IrProperty.addBackingField { }` builds the field with the property's name, `origin = PROPERTY_BACKING_FIELD`, `visibility = PRIVATE`, sets `backingField`, `correspondingPropertySymbol`, and `parent` in one call (this is what upstream `plugin-sandbox`'s `GeneratedTopLevelClassIrGenerator` uses). Prefer it over a hand-built `factory.buildField { }` + manual `backingField =` / `parent =`, which compiles but silently skips `correspondingPropertySymbol` and the backing-field origin. `addDefaultGetter` reads `backingField!!`, so call it after `addBackingField`.
+
+### 3. Add a constructor
+
+The constructor comes *after* the property on purpose: for a holder / data-carrier class the constructor body assigns the backing field, so `nameField` from step 2 must already exist. For a no-arg class drop the `addValueParameter` and `irSetField` lines.
 
 ```kotlin
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
@@ -93,34 +114,13 @@ val ctor = newClass.addConstructor {
             type = pluginContext.irBuiltIns.unitType,
             classSymbol = newClass.symbol,
         )
-        // Assign the constructor parameter to the backing field built in step 3.
+        // Assign the constructor parameter to the backing field built in step 2.
         +irSetField(irGet(newClass.thisReceiver!!), nameField, irGet(nameParam))
     }
 }
 ```
 
 `addConstructor { ... }` and `addValueParameter(name, type)` extend `IrClass` / `IrFunction` (both in `org.jetbrains.kotlin.ir.builders.declarations`); `irSetField(receiver, field, value)` and `irGet(value)` are `IrBuilder` extensions in `org.jetbrains.kotlin.ir.builders`. The body must call the superclass constructor (`irDelegatingConstructorCall`) and then run the instance initialiser. Reading `anyClass.owner` is gated by `@OptIn(UnsafeDuringIrConstructionAPI::class)` (as annotated above; the same opt-in is documented in [`ir-plugincontext-usage`](../ir-plugincontext-usage/guide.md)).
-
-### 3. Add fields
-
-```kotlin
-import org.jetbrains.kotlin.ir.builders.declarations.addBackingField
-import org.jetbrains.kotlin.ir.builders.declarations.addDefaultGetter
-import org.jetbrains.kotlin.ir.builders.declarations.addProperty
-
-val nameProperty = newClass.addProperty {
-    name = Name.identifier("name")
-    visibility = DescriptorVisibilities.PUBLIC
-    modality = Modality.FINAL
-}
-val nameField = nameProperty.addBackingField {
-    type = pluginContext.irBuiltIns.stringType
-    isFinal = true
-}
-nameProperty.addDefaultGetter(newClass, pluginContext.irBuiltIns)
-```
-
-Properties typically need a backing field plus a getter (and a setter for `var`s). All three helpers live in `org.jetbrains.kotlin.ir.builders.declarations`. `addProperty` appends the property to `newClass.declarations` and sets its `parent`; `IrProperty.addBackingField { }` builds the field with the property's name, `origin = PROPERTY_BACKING_FIELD`, `visibility = PRIVATE`, sets `backingField`, `correspondingPropertySymbol`, and `parent` in one call (this is what upstream `plugin-sandbox`'s `GeneratedTopLevelClassIrGenerator` uses). Prefer it over a hand-built `factory.buildField { }` + manual `backingField =` / `parent =`, which compiles but silently skips `correspondingPropertySymbol` and the backing-field origin. `addDefaultGetter` reads `backingField!!`, so call it after `addBackingField`.
 
 ### 4. Add member functions
 

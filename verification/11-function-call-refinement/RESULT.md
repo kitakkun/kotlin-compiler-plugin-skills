@@ -209,6 +209,8 @@ BUILD FAILED
 
 ## Re-run on Kotlin 2.4.20
 
+Build-file changes besides the version pins: the plugin module's `-Xcontext-parameters` block was removed (context parameters are stable since Kotlin 2.4.0; 2.4.20 only reported the flag as redundant) and the sample's `mainClass` was corrected to `com.example.MainKt`.
+
 ### Result: PASS — frontend refinement works AND the sample compiles, links and runs
 
 All `build.gradle.kts` pins were bumped from 2.3.21 to 2.4.20 (`kotlin("jvm")`,

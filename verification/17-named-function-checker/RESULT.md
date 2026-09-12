@@ -157,9 +157,9 @@ with no API guesswork. Findings:
    `KtDiagnosticFactoryDsl.kt:25-28` (for `infoWithoutSource`) is in `compiler/frontend.common-psi/`,
    not `compiler/frontend.common/`. The `git show v2.4.20:<path>` lookups fail until the path is fixed.
 
-4. **Nothing to add for the rename itself** — the CHANGES.md prediction "fails to compile against
-   2.4.20 with an unresolved reference (and, for the bucket, 'namedFunctionCheckers' overrides
-   nothing)" is confirmed verbatim, except that the message names the *old* identifier:
-   `'simpleFunctionCheckers' overrides nothing.` (the sentence currently says `'namedFunctionCheckers'`,
-   which is the new name and cannot be the one that "overrides nothing"). Fix the identifier in that
-   sentence.
+4. **Rename confirmed; one message identifier corrected (applied).** The CHANGES.md prediction "fails to
+   compile against 2.4.20 with an unresolved reference (and, for the bucket, `... overrides nothing`)" is
+   confirmed verbatim, with the message naming the *old* identifier: `'simpleFunctionCheckers' overrides
+   nothing.` At the time of this run the migration note quoted `'namedFunctionCheckers'` there; the
+   committed `fir-additional-checkers-extension/CHANGES.md` now quotes the old identifier, so this item is
+   a historical observation, not an open request.
