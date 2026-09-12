@@ -3,8 +3,8 @@
 Each subdirectory is an **independent Gradle project** that verifies a row of the "How to choose" table in `skills/kotlin-compiler-plugin/references/fir-extensions-overview/guide.md` (01-11), or a cross-cutting claim from another reference guide (12-17). All probes are pinned to Kotlin 2.4.20; each `RESULT.md` records the most recent run. Every verification has:
 
 - `SPEC.md` — the goal and PASS criterion for this verification
-- `plugin/` — the compiler plugin implementing the relevant FIR extension
-- `sample/` — a Kotlin module that loads the plugin via `-Xplugin=` and exercises the use case
+- `plugin/` — the compiler plugin implementing the extension under test (a FIR extension for 01-11 and 13, an `IrGenerationExtension` or registrar-level behavior for 12 and 14-16, a FIR checker for 17)
+- `sample/` — a Kotlin module that loads the plugin via `-Xplugin=` and exercises the use case (the cross-module probes 12 and 14 use `module-a/`, which applies the plugin, and `module-b/`, which only depends on `module-a` and must see the generated declarations)
 - `RESULT.md` — outcome of the most recent verification run
 
 The Gradle wrapper at `verification/gradlew` is shared. To run a saved verification:

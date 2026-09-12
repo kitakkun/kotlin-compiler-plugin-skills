@@ -40,7 +40,8 @@ import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 
 /**
- * For every `@GenerateHolder class Foo` in the module, synthesizes a brand-new top-level class
+ * For every top-level `@GenerateHolder class Foo` in the module (only direct `IrFile.declarations` are
+ * inspected; annotated nested classes are out of scope for this probe), synthesizes a brand-new top-level class
  *
  * ```kotlin
  * class FooHolder(value: String) {

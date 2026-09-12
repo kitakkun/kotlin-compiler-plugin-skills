@@ -88,7 +88,7 @@ The repo has three top-level directories of working Gradle projects, each with a
 
 | Directory | Purpose | Style |
 |---|---|---|
-| `verification/` | Fine-grained probes — one project per claim in the reference guides (one per row of the "How to choose" table in `fir-extensions-overview`, plus cross-cutting probes for cross-module IR visibility, alternate status-transformer slots, and the Kotlin 2.4.20 API additions) | 17 self-contained plugin + sample setups pinned to Kotlin 2.4.20; each ships a `SPEC.md` and `RESULT.md` |
+| `verification/` | Fine-grained probes — one project per claim in the reference guides (one per row of the "How to choose" table in `fir-extensions-overview`, plus cross-cutting probes for cross-module IR visibility, alternate status-transformer slots, and the Kotlin 2.4.20 API additions) | 17 self-contained setups pinned to Kotlin 2.4.20 — a `plugin/` plus either a `sample/` consumer module or, for the cross-module probes (12, 14), `module-a/` + `module-b/`; each ships a `SPEC.md` and `RESULT.md` |
 | `evaluation/` | End-to-end agent benchmarks — fixed implementation tasks of increasing complexity that measure how well a fresh Claude agent can produce a working plugin from the skill alone | 6 tasks; each ships a `SPEC.md` and `RESULT.md`; see `evaluation/README.md` for rubric |
 
 The minimal didactic example for the bootstrap guide lives at `skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/example/` (`hello-plugin`) — co-located with the guide that uses it.

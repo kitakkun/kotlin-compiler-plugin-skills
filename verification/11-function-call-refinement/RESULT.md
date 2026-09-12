@@ -1,6 +1,13 @@
 # Verification: 11-function-call-refinement
 
-## Result: PARTIAL — frontend works, IR codegen fails
+## Result: PASS (Kotlin 2.4.20; see "Re-run on Kotlin 2.4.20" below)
+
+> The section immediately below is the historical Kotlin 2.3.21 record, kept verbatim. It reported PARTIAL
+> because of a fir2ir NPE that turned out to be a plugin bug (constructor hand-built into `declarations`
+> instead of coming from a `FirDeclarationGenerationExtension`); the 2.4.20 re-run fixed it and the probe now
+> compiles and runs.
+
+## Historical result (Kotlin 2.3.21): PARTIAL — frontend works, IR codegen fails
 
 The plugin's `FirFunctionCallRefinementExtension.intercept()` and `transform()`
 both fire, and the FIR resolver successfully refines the call's return type

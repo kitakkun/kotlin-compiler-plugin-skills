@@ -20,11 +20,13 @@ Verify the three claims the skill makes about plugin-side message reporting sinc
 ## Project layout
 
 - `plugin/` — the compiler plugin.
-  - `MessageCollectorAccessComponentRegistrar` (`CompilerPluginRegistrar`, `supportsK2 = true`), annotated
-    `@OptIn(ExperimentalCompilerApi::class, MessageCollectorAccess::class)`. In `registerExtensions` it:
+  - `MessageCollectorAccessComponentRegistrar` (`CompilerPluginRegistrar`, `supportsK2 = true`), annotated only
+    `@OptIn(ExperimentalCompilerApi::class)`. The `MessageCollectorAccess` opt-in is deliberately confined to a
+    private `obtainMessageCollector(configuration)` accessor so that nothing else in the file has it in scope.
+    In `registerExtensions` it:
     - calls `configuration.reportInfo(...)`, `configuration.reportLog(...)` and
       `configuration.report(CliDiagnostics.COMPILER_PLUGIN_INITIALIZATION_WARNING, ...)` (claim 3, no opt-in needed);
-    - reads `configuration.messageCollector` (claim 1), reports one WARNING directly, and passes the collector to
+    - obtains the collector through the opted-in accessor (claim 1), reports one WARNING directly, and passes it to
       `HelloIrGenerationExtension`.
   - `HelloIrGenerationExtension` (`IrGenerationExtension`) reports `WARNING "hello from plugin"` in `generate` (claim 2).
 - `sample/` — a compile-only module (no `application` plugin) with one trivial `Main.kt`. Loads the plugin via the
