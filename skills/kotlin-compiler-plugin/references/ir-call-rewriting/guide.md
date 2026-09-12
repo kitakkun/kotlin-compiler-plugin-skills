@@ -216,6 +216,7 @@ You'll need annotation-checking helpers; `IrAnnotationContainer.hasAnnotation(fq
 Once you know the enclosing declaration is annotated, you usually need the annotation's arguments to decide *how* to rewrite. On Kotlin 2.4.20 the helpers are `IrAnnotation.getConstArgument<T>(name)` (const-valued lookup by parameter name), `IrAnnotationContainer.getAnnotationArgumentValue<T>(fqName, argName)` (the same without touching the `IrAnnotation` node), and the raw `IrAnnotation.argumentMapping: Map<Name, IrExpression?>`. The older `getAnnotationStringValue` / `getAnnotationValueOrNull` / `IrConstructorCall.getValueArgument(Name)` helpers were removed in 2.4.20 — see `CHANGES.md` if you are migrating.
 
 ```kotlin
+import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.util.getAnnotation
 import org.jetbrains.kotlin.ir.util.getAnnotationArgumentValue

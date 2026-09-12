@@ -148,7 +148,7 @@ object MustBeFinalChecker : FirRegularClassChecker(MppCheckerKind.Common) {
 }
 ```
 
-Each `Fir*Checker` base class corresponds to a FIR node type. The generic base `FirDeclarationChecker<D>` / `FirExpressionChecker<E>` live under `kotlin/compiler/fir/checkers/src/org/jetbrains/kotlin/fir/analysis/checkers/{declaration,expression}/`, but the per-node aliases below (`FirNamedFunctionChecker`, `FirRegularClassChecker`, ...) and the `DeclarationCheckers` / `ExpressionCheckers` buckets are **generated** into `kotlin/compiler/fir/checkers/gen/org/jetbrains/kotlin/fir/analysis/checkers/{declaration,expression}/` (`FirDeclarationCheckerAliases.kt`, `FirExpressionCheckerAliases.kt`, `DeclarationCheckers.kt`, `ExpressionCheckers.kt`) — look there, not under `src/`, when you need the exact alias name:
+Each `Fir*Checker` base class corresponds to a FIR node type. The generic base `FirDeclarationChecker<D>` / `FirExpressionChecker<E>` live under `kotlin/compiler/fir/checkers/src/org/jetbrains/kotlin/fir/analysis/checkers/{declaration,expression,type}/`, but the per-node aliases below (`FirNamedFunctionChecker`, `FirRegularClassChecker`, ...) and the `DeclarationCheckers` / `ExpressionCheckers` / `TypeCheckers` buckets are **generated** into `kotlin/compiler/fir/checkers/gen/org/jetbrains/kotlin/fir/analysis/checkers/{declaration,expression,type}/` (`FirDeclarationCheckerAliases.kt`, `FirExpressionCheckerAliases.kt`, `FirTypeCheckerAliases.kt`, `DeclarationCheckers.kt`, `ExpressionCheckers.kt`, `TypeCheckers.kt`) — look there, not under `src/`, when you need the exact alias name:
 
 | Base class | Triggered for | `check()` parameter type |
 |---|---|---|

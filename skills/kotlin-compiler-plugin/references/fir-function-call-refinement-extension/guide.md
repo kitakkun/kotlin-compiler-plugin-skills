@@ -178,7 +178,7 @@ class MyFirExtensionRegistrar : FirExtensionRegistrar() {
 }
 ```
 
-The opt-in is per-registrar — you don't need it on the extension class itself. The second line is not optional: see the next section.
+Two opt-ins are involved: `MyRefinement` itself must carry `@OptIn(FirExtensionApiInternals::class)` because the `FirFunctionCallRefinementExtension` base class is annotated (see the pseudocode above), and the registrar needs the same opt-in because the `+::` operator for this extension is annotated as well. The second registration line is not optional: see the next section.
 
 ## Members of the generated local class must come from a `FirDeclarationGenerationExtension`
 
