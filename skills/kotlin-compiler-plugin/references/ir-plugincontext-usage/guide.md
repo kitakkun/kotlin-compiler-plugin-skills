@@ -12,7 +12,7 @@ Every `IrGenerationExtension.generate(moduleFragment, pluginContext)` receives a
 - Adding metadata to plugin-generated declarations
 - Recording incremental-compilation lookups
 
-Source: [`kotlin/compiler/ir/backend.common/src/org/jetbrains/kotlin/backend/common/extensions/IrPluginContext.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/ir/backend.common/src/org/jetbrains/kotlin/backend/common/extensions/IrPluginContext.kt).
+Source: [`kotlin/compiler/ir/backend.common/src/org/jetbrains/kotlin/backend/common/extensions/IrPluginContext.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/ir/backend.common/src/org/jetbrains/kotlin/backend/common/extensions/IrPluginContext.kt).
 
 ## The modern lookup API (use this)
 

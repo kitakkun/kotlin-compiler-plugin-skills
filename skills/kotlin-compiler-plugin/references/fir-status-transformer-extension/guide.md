@@ -7,7 +7,7 @@ description: Modify modifiers (visibility, modality, isOpen, isFinal, isInline, 
 
 The K2 extension point that **rewrites the `FirDeclarationStatus`** (the bag of modifier flags) on existing user declarations. Canonical use: `@AllOpen` makes every member of an annotated class `open`; an `@External` annotation could change visibility; `@Inline` could force inlining.
 
-Source: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirStatusTransformerExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirStatusTransformerExtension.kt).
+Source: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirStatusTransformerExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirStatusTransformerExtension.kt).
 
 ## API surface
 
@@ -48,7 +48,7 @@ You can change visibility on functions, properties, constructors, accessors, fie
 
 ## End-to-end example: make annotated classes' members `open`
 
-A custom `@Open` annotation (`com.example.Open`) that compiles `@Open class Foo { fun bar() }` as `open class Foo { open fun bar() }`. This mirrors what the official allopen plugin does internally — allopen takes a configurable list of annotation FQNs via plugin options rather than hard-coding one. See [`plugins/allopen/allopen.k2/src/org/jetbrains/kotlin/allopen/fir/FirAllOpenStatusTransformer.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.10/plugins/allopen/allopen.k2/src/org/jetbrains/kotlin/allopen/fir/FirAllOpenStatusTransformer.kt) for the production implementation.
+A custom `@Open` annotation (`com.example.Open`) that compiles `@Open class Foo { fun bar() }` as `open class Foo { open fun bar() }`. This mirrors what the official allopen plugin does internally — allopen takes a configurable list of annotation FQNs via plugin options rather than hard-coding one. See [`plugins/allopen/allopen.k2/src/org/jetbrains/kotlin/allopen/fir/FirAllOpenStatusTransformer.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.20/plugins/allopen/allopen.k2/src/org/jetbrains/kotlin/allopen/fir/FirAllOpenStatusTransformer.kt) for the production implementation.
 
 ### 1. Predicate
 
@@ -115,7 +115,7 @@ class MakeOpenTransformer(session: FirSession) : FirStatusTransformerExtension(s
 }
 ```
 
-`status.modality` is **`null` when the user wrote no explicit `final`/`open` keyword** — at status-transform time the default-FINAL hasn't been materialised yet. A naive `if (status.modality == Modality.FINAL)` check silently misses this case and the transform becomes a no-op. The production allopen plugin (`FirAllOpenStatusTransformer.kt` at v2.3.21) uses a **2-arm** `when (status.modality)`: the `null` branch sets both `modality = OPEN` and `defaultModality = OPEN`; the `else` branch sets `defaultModality = OPEN` without touching the explicit modality. The 3-arm form shown above is a legitimate variant that makes the `Modality.FINAL` case explicit, but the production plugin collapses `FINAL`/`OPEN`/`ABSTRACT`/`SEALED` into one `else`. The `FirDeclarationStatus.transform(visibility, modality, init)` helper exists too, but it doesn't help with the `null`-modality case — `copyWithNewDefaults` is the canonical idiom.
+`status.modality` is **`null` when the user wrote no explicit `final`/`open` keyword** — at status-transform time the default-FINAL hasn't been materialised yet. A naive `if (status.modality == Modality.FINAL)` check silently misses this case and the transform becomes a no-op. The production allopen plugin (`FirAllOpenStatusTransformer.kt` at v2.4.20) uses a **2-arm** `when` over the explicit modality: the `null` branch sets both `modality = OPEN` and `defaultModality = OPEN`; the `else` branch sets `defaultModality = OPEN` without touching the explicit modality. Since 2.4.20 allopen reads the explicit modality of a `FirPropertyAccessor` from its owning property (`declaration.propertySymbol.fir.status.modality`, under `@OptIn(SymbolInternals::class)`) rather than from the accessor's own status, so a `final val` with a getter keeps its getter final; for every other declaration it reads `status.modality` directly. The 3-arm form shown above is a legitimate variant that makes the `Modality.FINAL` case explicit, but the production plugin collapses `FINAL`/`OPEN`/`ABSTRACT`/`SEALED` into one `else`. The `FirDeclarationStatus.transform(visibility, modality, init)` helper exists too, but it doesn't help with the `null`-modality case — `copyWithNewDefaults` is the canonical idiom.
 
 ### 3. Wire it up
 

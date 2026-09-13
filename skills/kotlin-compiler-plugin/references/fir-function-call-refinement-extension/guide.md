@@ -1,17 +1,17 @@
 ---
 name: fir-function-call-refinement-extension
-description: Refine the return type of a resolved function call at the call site by generating local declarations (typically a local class encoding inferred information from arguments) — the data-frame schema-inference pattern. Covers FirFunctionCallRefinementExtension, the intercept/transform two-phase API, the run/let scope-wrapping codegen pattern, the @FirExtensionApiInternals stability gate, the IR-codegen incompleteness, and why you almost certainly do not want to use this. Read fir-extensions-overview, fir-predicate-system, and fir-additional-checkers-extension first. NOT a general "rewrite this call" hook (it can only refine the return type, not the callee or arguments).
+description: Refine the return type of a resolved function call at the call site by generating local declarations (typically a local class encoding inferred information from arguments) — the data-frame schema-inference pattern. Covers FirFunctionCallRefinementExtension, the intercept/transform two-phase API, the run/let scope-wrapping codegen pattern, the @FirExtensionApiInternals stability gate, the IR-codegen incompleteness, and why you almost certainly do not want to use this. Read fir-extensions-overview, fir-predicate-system, and fir-additional-checkers-extension first. If the user references `KtFakeSourceElementKind.PluginGenerated` as a value (it became a sealed class in Kotlin 2.4.20) or hits `FirDistinctSourceElementsHandler` failures in diagnostic tests, ALSO Read CHANGES.md in this skill's directory. NOT a general "rewrite this call" hook (it can only refine the return type, not the callee or arguments).
 ---
 
 # FirFunctionCallRefinementExtension
 
-> **Stability warning** — the source itself opens with `@FirExtensionApiInternals` and the KDoc reads literally: `!!!! This extension is highly unstable and not recommended to use !!!!`. The compiler enforces opting into `@FirExtensionApiInternals` to even reference the class. Use it only if you've ruled out every other extension; treat each Kotlin minor as a potential breakage point.
+> **Stability warning** — the source itself opens with `@FirExtensionApiInternals` and the KDoc reads literally: **"This extension is highly unstable and not recommended to use!"**. The compiler enforces opting into `@FirExtensionApiInternals` to even reference the class. Use it only if you've ruled out every other extension; treat each Kotlin minor as a potential breakage point.
 
 The motivating use case is **`kotlinx.dataframe`**: when the user writes `df.add("score") { 1 }`, the plugin wants the expression's type to be `DataFrame<NewSchema>` where `NewSchema` is a generated local class encoding the union of the original schema and the new "score: Int" column. Ordinary call resolution can't do this — it returns the function's declared return type. This extension hooks into the resolver between "candidate selected" and "outer call resolved" to substitute a more-specific return type and emit the local declarations needed to make that type meaningful.
 
-Source: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirFunctionCallRefinementExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirFunctionCallRefinementExtension.kt). Reference impls:
-- [`kotlin/plugins/plugin-sandbox/src/org/jetbrains/kotlin/plugin/sandbox/fir/DataFrameLikeCallsRefinementExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.10/plugins/plugin-sandbox/src/org/jetbrains/kotlin/plugin/sandbox/fir/DataFrameLikeCallsRefinementExtension.kt) (sandbox prototype)
-- [`kotlin/plugins/kotlin-dataframe/kotlin-dataframe.k2/src/org/jetbrains/kotlinx/dataframe/plugin/extensions/FunctionCallTransformer.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.10/plugins/kotlin-dataframe/kotlin-dataframe.k2/src/org/jetbrains/kotlinx/dataframe/plugin/extensions/FunctionCallTransformer.kt) (production)
+Source: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirFunctionCallRefinementExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirFunctionCallRefinementExtension.kt). Reference impls:
+- [`kotlin/plugins/plugin-sandbox/src/org/jetbrains/kotlin/plugin/sandbox/fir/DataFrameLikeCallsRefinementExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.20/plugins/plugin-sandbox/src/org/jetbrains/kotlin/plugin/sandbox/fir/DataFrameLikeCallsRefinementExtension.kt) (sandbox prototype)
+- [`kotlin/plugins/kotlin-dataframe/kotlin-dataframe.k2/src/org/jetbrains/kotlinx/dataframe/plugin/extensions/FunctionCallTransformer.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.20/plugins/kotlin-dataframe/kotlin-dataframe.k2/src/org/jetbrains/kotlinx/dataframe/plugin/extensions/FunctionCallTransformer.kt) (production)
 
 ## What you get
 
@@ -111,7 +111,14 @@ class MyRefinement(session: FirSession) : FirFunctionCallRefinementExtension(ses
         //    derive a unique class name from `callInfo.callSite` source position or your own counter.
         val refinedClassId = ClassId(symbol.callableId.packageName, Name.identifier("Refined_${freshId()}"))
         val refinedSymbol = FirRegularClassSymbol(refinedClassId)
-        val refinedClass = buildRegularClass { /* populated from callInfo.arguments */ }
+        val refinedClass = buildRegularClass {
+            // 2.4.20+: every local declaration you inject must have a *distinct* source element.
+            // Derive it from the call site and tag it with a marker unique to this class.
+            source = callInfo.callSite.source?.fakeElement(
+                KtFakeSourceElementKind.PluginGenerated.Custom(RefinedSourceKind.Schema(refinedClassId.shortClassName.asString())),
+            )
+            /* remaining fields populated from callInfo.arguments */
+        }
 
         // 2. Build a return type referencing the refined class.
         val newReturnType = ConeClassLikeTypeImpl(
@@ -135,6 +142,11 @@ class MyRefinement(session: FirSession) : FirFunctionCallRefinementExtension(ses
     override fun ownsSymbol(symbol: FirRegularClassSymbol): Boolean = /* check your storage */ ...
     override fun anchorElement(symbol: FirRegularClassSymbol): KtSourceElement = /* from your storage */ ...
     override fun restoreSymbol(call: FirFunctionCall, name: Name): FirRegularClassSymbol? = /* look up in your storage */ ...
+}
+
+/** Marker for `PluginGenerated.Custom` — must have stable equals/hashCode/toString, so a data class is the natural choice. */
+private sealed class RefinedSourceKind {
+    data class Schema(val name: String) : RefinedSourceKind()
 }
 ```
 
@@ -164,6 +176,31 @@ A common misconception: refinement does **not** rewrite what the function does a
 ### Generated declarations must be **local**
 
 The KDoc explicitly states: "Generated declarations should be local because this `FirExtension` works at body resolve stage and thus cannot create new top level declarations." Wrapping in `run { ... }` is mandatory for that reason — you have a body scope to put your local class in. Returning a top-level class from `transform` produces a corruption error during serialization (the metadata writer sees a class with no enclosing source file).
+
+### Generated local declarations need **distinct** source elements (2.4.20+)
+
+Because the local classes you inject end up inside an *existing* source `FirFile`, they fall under the FIR-wide constraint that every declaration in a source file has a distinct `(realSource, kind)` source element — the constraint plugin-generated top-level declarations (`FirDeclarationGenerationExtension`) are exempt from. The KDoc added in 2.4.20 spells this out: build each generated local declaration's `source` from the call site with a `KtFakeSourceElementKind.PluginGenerated` kind, and use `PluginGenerated.Custom(marker)` with a marker that is unique per generated declaration so that two classes anchored on the same call (schema + scope, or the classes of two nested calls) never collide:
+
+```kotlin
+import org.jetbrains.kotlin.KtFakeSourceElementKind
+import org.jetbrains.kotlin.fakeElement
+
+private sealed class MySourceKind {
+    data class Schema(val name: String) : MySourceKind()
+    data class Scope(val name: String) : MySourceKind()
+}
+
+val schemaClass = buildRegularClass {
+    source = callSite.source?.fakeElement(KtFakeSourceElementKind.PluginGenerated.Custom(MySourceKind.Schema(schemaId.shortClassName.asString())))
+    // ...
+}
+val scopeClass = buildRegularClass {
+    source = callSite.source?.fakeElement(KtFakeSourceElementKind.PluginGenerated.Custom(MySourceKind.Scope(scopeId.shortClassName.asString())))
+    // ...
+}
+```
+
+The marker is an `Any` that must have stable `equals`/`hashCode`/`toString` — a `data class` keyed by the generated class name is the pattern the kotlin-dataframe plugin uses (`DataFrameSourceElementKind.SchemaClass/TypeClass/PropertiesScopeClass`). `PluginGenerated.Default` (the old plain `PluginGenerated` object) is still fine for declarations generated through `FirDeclarationGenerationExtension`, but reusing it for several local classes anchored on the same call gives them *equal* source elements. The official test infrastructure now enforces the constraint: `FirDistinctSourceElementsHandler` is part of the default diagnostic-test handler set, so a plugin test that injects two local classes with the same source fails with "Duplicate source elements in test file ...". Leaving `source` unset (`null`) is not flagged by that check, but then IDE navigation and `anchorElement` have nothing to work with — set it.
 
 ### Return-type substitution doesn't reach the `IrPluginContext`
 

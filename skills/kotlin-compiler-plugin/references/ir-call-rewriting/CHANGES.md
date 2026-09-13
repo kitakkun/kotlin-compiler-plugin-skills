@@ -1,6 +1,35 @@
 # Changes affecting this skill
 
-API migrations relevant to rewriting calls in IR. This skill targets the **current stable Kotlin** (2.4.0).
+API migrations relevant to rewriting calls in IR. This skill targets the **current stable Kotlin** (2.4.20).
+
+## Kotlin 2.4.10 → 2.4.20: annotation-argument helpers removed from `IrUtils.kt`
+
+Nothing on `IrMemberAccessExpression` changed for callers (`arguments` merely became `open val`; `dispatchReceiver` is still the `@UnsafeDuringIrConstructionAPI` convenience over `arguments[0]`). What did change is the helper family a call-rewriter typically uses to read the *arguments of an annotation* (e.g. `@Instrument("tag")`) before deciding whether to rewrite:
+
+- `IrAnnotation.getAnnotationStringValue()` / `getAnnotationStringValue(name)` — **removed**.
+- `IrAnnotation.getAnnotationValueOrNull<T>(name)` — **removed**.
+- `IrConstructorCall.getValueArgument(name: Name)` — **removed**.
+- `IrAnnotation.symbol` (the constructor symbol) — `@DeprecatedCompilerApi(deprecatedSince = _2_4_20)`; use the new `IrAnnotation.classSymbol: IrClassSymbol` to identify the annotation class.
+
+Replacements (all in `org.jetbrains.kotlin.ir.util` unless noted):
+
+- `IrAnnotation.argumentMapping: Map<Name, IrExpression?>` — the raw argument view, declared on the tree node itself (`org.jetbrains.kotlin.ir.expressions.IrAnnotation`).
+- `IrAnnotation.getConstArgument<T>(name: String): T?` — const-valued lookup by parameter name (`AdditionalIrUtils.kt`).
+- `IrAnnotationContainer.getAnnotationArgumentValue<T>(fqName, argumentName)` — **survives**, now implemented on top of `getConstArgument`.
+- `IrAnnotation.isAnnotation(classId: ClassId)` — new overload next to the existing `FqName` one.
+- `hasAnnotation(FqName)` / `hasAnnotation(ClassId)` / `hasAnnotation(IrClassSymbol)` and `getAnnotation(FqName)` — unchanged signatures.
+
+```kotlin
+// Before (2.4.10)
+val tag: String? = enclosing.getAnnotation(MY_ANNOTATION_FQ)?.getAnnotationValueOrNull<String>("tag")
+
+// After (2.4.20)
+val tag: String? = enclosing.getAnnotation(MY_ANNOTATION_FQ)?.getConstArgument<String>("tag")
+// or, without touching the IrAnnotation node:
+val tag2: String? = enclosing.getAnnotationArgumentValue<String>(MY_ANNOTATION_FQ, "tag")
+```
+
+Upstream: [`IrUtils.kt:367-370`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/util/IrUtils.kt#L367-L370) (surviving `getAnnotationArgumentValue`), [`AdditionalIrUtils.kt:413-416`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/util/AdditionalIrUtils.kt#L413-L416) (`getConstArgument`), [`IrAnnotation.kt:22-27`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/ir/ir.tree/gen/org/jetbrains/kotlin/ir/expressions/IrAnnotation.kt#L22-L27) (`classSymbol`, `argumentMapping`, deprecated `symbol`). The removed helpers were at `IrUtils.kt:351-392` at v2.4.10 and were deleted without a deprecation cycle.
 
 ## Kotlin 2.3 → 2.4: deprecated argument accessors removed
 

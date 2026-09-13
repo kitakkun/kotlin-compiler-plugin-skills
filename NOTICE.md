@@ -36,14 +36,14 @@ Apache License 2.0**, not this repository's MIT License.
   `Fir2IrReplSnippetConfiguratorExtension`, `FirReplHistoryProvider`, etc.),
   test framework directives (`FIR_DUMP`, `DUMP_IR`, `<!DIAGNOSTIC!>` marker syntax),
   test runner classes (`AbstractKotlinCompilerTest`, `JvmBoxRunner`,
-  `AbstractFirPhasedDiagnosticTest`, `AbstractFirBlackBoxCodegenTestBase`),
+  `AbstractFirPhasedDiagnosticTest`, `AbstractJvmBlackBoxCodegenTestBase`),
   the Gradle subplugin API (`KotlinCompilerPluginSupportPlugin`, `SubpluginArtifact`),
   and the scripting plugin reference implementations under `plugins/scripting/scripting-compiler/`
   (`FirScriptConfigurationExtensionImpl`, `FirScriptResolutionConfigurationExtensionImpl`,
   `Fir2IrScriptConfiguratorExtensionImpl`, `FirReplSnippetConfiguratorExtensionImpl`,
   `FirReplSnippetResolveExtensionImpl`, `Fir2IrReplSnippetConfiguratorExtensionImpl`,
   `FirReplHistoryProviderImpl`).
-- Citations are pinned to tag `v2.4.10` unless noted otherwise.
+- Citations are pinned to tag `v2.4.20` unless noted otherwise.
 
 ## Kotlin/compiler-plugin-template
 

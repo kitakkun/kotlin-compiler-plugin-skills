@@ -1,6 +1,6 @@
 # Changes affecting this skill
 
-API migrations relevant to writing `FirSamConversionTransformerExtension`. This skill targets the **current stable Kotlin** (2.4.0).
+API migrations relevant to writing `FirSamConversionTransformerExtension`. This skill targets the **current stable Kotlin** (2.4.20).
 
 ## Kotlin 2.3.0 → 2.3.20
 

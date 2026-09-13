@@ -7,7 +7,7 @@ All quoted snippets below originate from the JetBrains/kotlin repository under t
 ## `FirScriptConfiguratorExtension` API surface
 
 ### Claim: abstract methods `accepts`, `configureContainingFile`, `configure`
-- **File**: [`kotlin/compiler/fir/raw-fir/raw-fir.common/src/org/jetbrains/kotlin/fir/builder/FirScriptConfiguratorExtension.kt:18-46`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/raw-fir/raw-fir.common/src/org/jetbrains/kotlin/fir/builder/FirScriptConfiguratorExtension.kt#L18-L46)
+- **File**: [`kotlin/compiler/fir/raw-fir/raw-fir.common/src/org/jetbrains/kotlin/fir/builder/FirScriptConfiguratorExtension.kt:18-46`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/raw-fir/raw-fir.common/src/org/jetbrains/kotlin/fir/builder/FirScriptConfiguratorExtension.kt#L18-L46)
 - **Snippet** (full class body):
   ```kotlin
   abstract class FirScriptConfiguratorExtension(
@@ -32,7 +32,7 @@ All quoted snippets below originate from the JetBrains/kotlin repository under t
   ```
 
 ### Claim: reference impl uses `sourceFile != null` as its `accepts(...)` filter (i.e. it claims every script source)
-- **File**: [`kotlin/plugins/scripting/scripting-compiler/src/org/jetbrains/kotlin/scripting/compiler/plugin/services/FirScriptConfigurationExtensionImpl.kt:62-63`](https://github.com/JetBrains/kotlin/blob/v2.4.10/plugins/scripting/scripting-compiler/src/org/jetbrains/kotlin/scripting/compiler/plugin/services/FirScriptConfigurationExtensionImpl.kt#L62-L63)
+- **File**: [`kotlin/plugins/scripting/scripting-compiler/src/org/jetbrains/kotlin/scripting/compiler/plugin/services/FirScriptConfigurationExtensionImpl.kt:62-63`](https://github.com/JetBrains/kotlin/blob/v2.4.20/plugins/scripting/scripting-compiler/src/org/jetbrains/kotlin/scripting/compiler/plugin/services/FirScriptConfigurationExtensionImpl.kt#L62-L63)
 - **Snippet**:
   ```kotlin
   override fun accepts(sourceFile: KtSourceFile?, scriptSource: KtSourceElement): Boolean =
@@ -44,7 +44,7 @@ All quoted snippets below originate from the JetBrains/kotlin repository under t
 ## `FirScriptResolutionConfigurationExtension` API surface
 
 ### Claim: single abstract method `getScriptDefaultImports(script: FirScript): List<FirImport>?`
-- **File**: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirScriptResolutionConfigurationExtension.kt:11-29`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirScriptResolutionConfigurationExtension.kt#L11-L29)
+- **File**: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirScriptResolutionConfigurationExtension.kt:11-29`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirScriptResolutionConfigurationExtension.kt#L11-L29)
 - **Snippet**:
   ```kotlin
   abstract class FirScriptResolutionConfigurationExtension(
@@ -73,7 +73,7 @@ All quoted snippets below originate from the JetBrains/kotlin repository under t
 ## `Fir2IrScriptConfiguratorExtension` API surface
 
 ### Claim: single abstract method `IrScript.configure(script: FirScript, getIrScriptByFirSymbol: (FirScriptSymbol) -> IrScriptSymbol?)`
-- **File**: [`kotlin/compiler/fir/fir2ir/src/org/jetbrains/kotlin/fir/backend/Fir2IrScriptConfiguratorExtension.kt:13-34`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/fir2ir/src/org/jetbrains/kotlin/fir/backend/Fir2IrScriptConfiguratorExtension.kt#L13-L34)
+- **File**: [`kotlin/compiler/fir/fir2ir/src/org/jetbrains/kotlin/fir/backend/Fir2IrScriptConfiguratorExtension.kt:13-34`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/fir2ir/src/org/jetbrains/kotlin/fir/backend/Fir2IrScriptConfiguratorExtension.kt#L13-L34)
 - **Snippet**:
   ```kotlin
   abstract class Fir2IrScriptConfiguratorExtension(
@@ -99,8 +99,8 @@ All quoted snippets below originate from the JetBrains/kotlin repository under t
 
 ## Registration via `FirExtensionRegistrar`
 
-### Claim: All three scripting extensions still appear in `AVAILABLE_EXTENSIONS` at v2.4.10
-- **File**: [`kotlin/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt:23-43`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt#L23-L43)
+### Claim: All three scripting extensions still appear in `AVAILABLE_EXTENSIONS` at v2.4.20
+- **File**: [`kotlin/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt:23-43`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt#L23-L43)
 - The three entries are: `FirScriptConfiguratorExtension::class` (line 33), `FirScriptResolutionConfigurationExtension::class` (line 34), `Fir2IrScriptConfiguratorExtension::class` (line 35).
 
 ---

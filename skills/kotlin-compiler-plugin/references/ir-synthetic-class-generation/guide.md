@@ -1,6 +1,6 @@
 ---
 name: ir-synthetic-class-generation
-description: Build entirely new IR classes (with members, supertypes, and constructors) at IR-generation time — typically as the IR-side counterpart of FIR-generated declarations whose backend implementation needs to be synthesised. Covers IrFactory, IrBuilder helpers, declaration parents, and the FIR↔IR pairing pattern. Read ir-plugincontext-usage and fir-declaration-generation-extension first. NOT for modifying existing functions (see ir-body-modification) or for replacing calls (see ir-call-rewriting). If the user references `createParameterDeclarations()` or `registerClassAsMetadataVisible` (both removed/non-existent), ALSO Read CHANGES.md in this skill's directory.
+description: Build entirely new IR classes (with members, supertypes, and constructors) at IR-generation time — typically as the IR-side counterpart of FIR-generated declarations whose backend implementation needs to be synthesised. Covers IrFactory, IrBuilder helpers, declaration parents, and the FIR↔IR pairing pattern. Read ir-plugincontext-usage and fir-declaration-generation-extension first. NOT for modifying existing functions (see ir-body-modification) or for replacing calls (see ir-call-rewriting). If the user references `createParameterDeclarations()` (deprecated for removal) or calls `registerClassAsMetadataVisible` / `registerPropertyAsMetadataVisible` while targeting Kotlin older than 2.4.20 (where those did not exist), ALSO Read CHANGES.md in this skill's directory.
 ---
 
 # IR Synthetic Class Generation
@@ -145,9 +145,34 @@ newClass.parent = existingClass
 
 `parent` must be set correctly or IR validation fails. The parent contributes to the `kotlinFqName` of the new class.
 
-### 6. Make members visible to metadata (K2 only)
+### 6. Make the class visible to metadata (K2 only)
 
-For external module consumption, register the **functions and constructors** (the registrar does not currently support whole-class registration):
+Since Kotlin 2.4.20 the registrar can register a whole class in one call. It recursively registers the class's constructors, functions, properties (through the new `registerPropertyAsMetadataVisible`), and nested/inner classes, skipping fake overrides:
+
+```kotlin
+val registrar = pluginContext.metadataDeclarationRegistrar
+
+// Wire everything up first (steps 1-5: parent, superTypes, all members — each property
+// with a getter — and sealedSubclasses for sealed classes), then register the outermost class ONCE.
+registrar.registerClassAsMetadataVisible(newClass)
+
+// To attach annotations onto a generated declaration.
+// Kotlin 2.4.0+: the list element type is IrAnnotation, not IrConstructorCall.
+// Build each with DeclarationIrBuilder.irAnnotation(ctorSymbol, typeArguments)
+// (irCallConstructor(...) still returns a plain IrConstructorCall — wrong type here).
+registrar.addMetadataVisibleAnnotationsToElement(declaration, listOfAnnotations) // List<IrAnnotation>
+```
+
+Constraints of `registerClassAsMetadataVisible` (fir2ir implementation, `Fir2IrIrGeneratedDeclarationsRegistrar`):
+
+- Enum classes are rejected with `error("Enum classes are not supported for registerClassAsMetadataVisible: ...")`.
+- Every `IrProperty` reached (directly or via recursion) must have a getter; a property without one fails with `error("Property without getter is not supported: ...")`. Local properties are silently skipped.
+- Only `IrConstructor`, `IrSimpleFunction` (non-accessor), `IrProperty`, and `IrClass` members are walked; anonymous initializers and non-backing `IrField`s are ignored.
+- For an inner class the captured outer type parameters are re-derived from the enclosing chain, so set `parent` on every level before registering.
+- Sealed classes: `sealedSubclasses` is read at registration time, so populate it first.
+- Do not also call the per-member `register*AsMetadataVisible` on members of a class you registered as a whole — the class walk already did it.
+
+On Kotlin 2.4.10 and older (or when you only add a member to an *existing* class, see step 7), register **functions and constructors** individually — properties and whole classes could not be registered before 2.4.20:
 
 ```kotlin
 val registrar = pluginContext.metadataDeclarationRegistrar
@@ -157,12 +182,6 @@ newClass.functions.forEach { fn ->
 newClass.constructors.forEach { ctor ->
     registrar.registerConstructorAsMetadataVisible(ctor)
 }
-
-// To attach annotations onto a generated declaration.
-// Kotlin 2.4.0: the list element type is IrAnnotation, not IrConstructorCall.
-// Build each with DeclarationIrBuilder.irAnnotation(ctorSymbol, typeArguments)
-// (irCallConstructor(...) still returns a plain IrConstructorCall — wrong type here).
-registrar.addMetadataVisibleAnnotationsToElement(declaration, listOfAnnotations) // List<IrAnnotation>
 ```
 
 Available `IrGeneratedDeclarationsRegistrar` methods:
@@ -171,12 +190,14 @@ Available `IrGeneratedDeclarationsRegistrar` methods:
 |---|---|
 | `registerFunctionAsMetadataVisible(IrSimpleFunction)` | Make a generated function visible to consumers' metadata |
 | `registerConstructorAsMetadataVisible(IrConstructor)` | Same, for constructors |
-| `addMetadataVisibleAnnotationsToElement(IrDeclaration, List<IrAnnotation>)` | Attach annotations to be saved into metadata. **Kotlin 2.4.0: element type is `IrAnnotation`** (was `IrConstructorCall` through 2.3.x); build with `DeclarationIrBuilder.irAnnotation(...)` |
+| `registerPropertyAsMetadataVisible(IrProperty)` | Same, for properties (getter required; backing field and setter are picked up if present). **New in Kotlin 2.4.20** (KT-63881) |
+| `registerClassAsMetadataVisible(IrClass)` | Register a whole class and, recursively, its constructors, functions, properties, and nested/inner classes. Enum classes are not supported. **New in Kotlin 2.4.20** (KT-79565) |
+| `addMetadataVisibleAnnotationsToElement(IrDeclaration, List<IrAnnotation>)` | Attach annotations to be saved into metadata. **Kotlin 2.4.0+: element type is `IrAnnotation`** (was `IrConstructorCall` through 2.3.x); build with `DeclarationIrBuilder.irAnnotation(...)` |
 | `getMetadataVisibleAnnotationsForElement(IrDeclaration): MutableList<IrAnnotation>` | Read back the metadata-visible annotations that were attached (`IrAnnotation` since 2.4.0) |
 | `addCustomMetadataExtension(declaration, id, data)` | Attach raw bytes under a custom extension id (consumed by your own paired FIR-resolver / IR-extension on the read side) |
 | `getCustomMetadataExtension(declaration, id): ByteArray?` | Read back the bytes attached via `addCustomMetadataExtension` |
 
-There is currently **no** `registerClassAsMetadataVisible` or `registerPropertyAsMetadataVisible` (KT-63881 tracks the property variant). For whole-class metadata visibility, register every function and constructor individually. Most plugins (kotlinx-serialization, plugin-sandbox) take this approach.
+Non-FIR pipelines (the plain `IrPluginContextImpl` used outside fir2ir) implement all `register*AsMetadataVisible` members as no-ops, so registration is harmless but ineffective there. The production reference for the whole-class API is `kotlin/plugins/plugin-sandbox/.../ir/GeneratedTopLevelClassIrGenerator.kt`.
 
 ### 7. Pattern: FIR-generated companion + IR-only metadata-visible factory
 
@@ -301,7 +322,7 @@ Don't try to compete with the data class lowering. If your class needs `equals`/
 - **Declare the class shape at frontend level** → [`fir-declaration-generation-extension`](../fir-declaration-generation-extension/guide.md)
 - **Add bodies to functions of the generated class** → [`ir-body-modification`](../ir-body-modification/guide.md)
 - **Look up the symbols of supertypes / referenced classes** → [`ir-plugincontext-usage`](../ir-plugincontext-usage/guide.md)
-- **Mark the class as metadata-visible to downstream modules** → covered above with `metadataDeclarationRegistrar`
+- **Mark the class as metadata-visible to downstream modules** → covered above with `metadataDeclarationRegistrar.registerClassAsMetadataVisible` (2.4.20+) or per-member registration
 
 ## What this skill does NOT cover
 

@@ -1,6 +1,6 @@
 ---
 name: ir-call-rewriting
-description: Replace function calls in user code with calls to a different function during IR transformation — the canonical pattern for "intercept every call to X and route it through Y", used by power-assert, atomicfu, instrumentation plugins, and feature-flag rewriters. Covers IrElementTransformerVoidWithContext, visitCall, building IrCalls with DeclarationIrBuilder, the unified arguments list, deepCopyWithSymbols, and IrPluginContext lookups. Read ir-plugincontext-usage and compiler-plugin-bootstrap first. NOT for body modification of arbitrary functions (see ir-body-modification) or for adding new declarations (see ir-synthetic-class-generation). If the user is upgrading from older Kotlin and references `dispatchReceiver`/`extensionReceiver`/`valueArguments` separately, or hits unified-arguments confusion, ALSO Read CHANGES.md in this skill's directory.
+description: Replace function calls in user code with calls to a different function during IR transformation — the canonical pattern for "intercept every call to X and route it through Y", used by power-assert, atomicfu, instrumentation plugins, and feature-flag rewriters. Covers IrElementTransformerVoidWithContext, visitCall, building IrCalls with DeclarationIrBuilder, the unified arguments list, deepCopyWithSymbols, and IrPluginContext lookups. Read ir-plugincontext-usage and compiler-plugin-bootstrap first. NOT for body modification of arbitrary functions (see ir-body-modification) or for adding new declarations (see ir-synthetic-class-generation). If the user is upgrading from older Kotlin and references `dispatchReceiver`/`extensionReceiver`/`valueArguments` separately, hits unified-arguments confusion, or gets `Unresolved reference` on `getAnnotationValueOrNull` / `getAnnotationStringValue` / `IrConstructorCall.getValueArgument(Name)` or a deprecation on `IrAnnotation.symbol` (all changed in 2.4.20), ALSO Read CHANGES.md in this skill's directory.
 ---
 
 # IR Call Rewriting
@@ -250,7 +250,7 @@ Whenever a rewrite causes `IrFunction`s or other declarations to change parents 
 
 ### Symbol matching across overrides
 
-`expression.symbol == targetSymbol` works for direct calls. But a user can override an annotated function in a subclass — that override has a *different* symbol. For interface-method targeting, traverse `function.allOverridden()` or use `function.hasAnnotationOrOverridden(annotationFqName)` (in `org.jetbrains.kotlin.ir.util`). Power-assert uses this pattern.
+`expression.symbol == targetSymbol` works for direct calls. But a user can override an annotated function in a subclass — that override has a *different* symbol. For interface-method targeting, traverse `function.allOverridden(includeSelf = true)` (in `org.jetbrains.kotlin.ir.util`) and check `hasAnnotation` on each. Power-assert uses this pattern via its own private helper `IrSimpleFunction.hasAnnotationOrOverridden(classId)` (`plugins/power-assert/.../powerassert/IrUtils.kt`) — that helper is *not* in the compiler's `ir.util` package, so copy the two-line recursion into your plugin rather than importing it.
 
 ### Return type mismatch propagates upward
 

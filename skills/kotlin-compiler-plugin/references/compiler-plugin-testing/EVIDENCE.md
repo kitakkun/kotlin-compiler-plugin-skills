@@ -10,7 +10,7 @@ Original copyright applies to each snippet. See [`../../NOTICE.md`](../../NOTICE
 ## Test-data directives
 
 ### Claim: `// FIR_DUMP` — "Compare FIR text dump against a `.fir.txt` golden"
-- **File**: [`kotlin/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/directives/FirDiagnosticsDirectives.kt:40`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/directives/FirDiagnosticsDirectives.kt#L40)
+- **File**: [`kotlin/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/directives/FirDiagnosticsDirectives.kt:40`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/directives/FirDiagnosticsDirectives.kt#L40)
 - **Snippet**:
   ```kotlin
   val FIR_DUMP by directive(
@@ -22,7 +22,7 @@ Original copyright applies to each snippet. See [`../../NOTICE.md`](../../NOTICE
   ```
 
 ### Claim: `// LANGUAGE: +Feature / -Feature`
-- **File**: [`kotlin/compiler/test-infrastructure/testFixtures/org/jetbrains/kotlin/test/directives/LanguageSettingsDirectives.kt:13`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/test-infrastructure/testFixtures/org/jetbrains/kotlin/test/directives/LanguageSettingsDirectives.kt#L13)
+- **File**: [`kotlin/compiler/test-infrastructure/testFixtures/org/jetbrains/kotlin/test/directives/LanguageSettingsDirectives.kt:14`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/test-infrastructure/testFixtures/org/jetbrains/kotlin/test/directives/LanguageSettingsDirectives.kt#L14)
 - **Snippet**:
   ```kotlin
   val LANGUAGE by stringDirective(
@@ -35,7 +35,7 @@ Original copyright applies to each snippet. See [`../../NOTICE.md`](../../NOTICE
   No `!` prefix in the current syntax (confirmed by usage line).
 
 ### Claim: `// DUMP_IR` — "Dump the generated IR for inspection"
-- **File**: [`kotlin/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/directives/CodegenTestDirectives.kt:103`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/directives/CodegenTestDirectives.kt#L103)
+- **File**: [`kotlin/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/directives/CodegenTestDirectives.kt:103`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/directives/CodegenTestDirectives.kt#L103)
 - **Snippet**:
   ```kotlin
   val DUMP_IR by directive(
@@ -44,7 +44,7 @@ Original copyright applies to each snippet. See [`../../NOTICE.md`](../../NOTICE
   ```
 
 ### Claim: `// IGNORE_FIR_DIAGNOSTICS` — "Suppress FIR diagnostic checking"
-- **File**: [`kotlin/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/directives/CodegenTestDirectives.kt:91`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/directives/CodegenTestDirectives.kt#L91)
+- **File**: [`kotlin/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/directives/CodegenTestDirectives.kt:91`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/directives/CodegenTestDirectives.kt#L91)
 - **Snippet**:
   ```kotlin
   val IGNORE_FIR_DIAGNOSTICS by directive(
@@ -53,7 +53,7 @@ Original copyright applies to each snippet. See [`../../NOTICE.md`](../../NOTICE
   ```
 
 ### Claim: `<!DIAGNOSTIC!>code<!>` inline marker syntax
-- **File**: [`kotlin/compiler/test-infrastructure-utils/testFixtures/org/jetbrains/kotlin/codeMetaInfo/CodeMetaInfoParser.kt:11`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/test-infrastructure-utils/testFixtures/org/jetbrains/kotlin/codeMetaInfo/CodeMetaInfoParser.kt#L11)
+- **File**: [`kotlin/compiler/test-infrastructure-utils/testFixtures/org/jetbrains/kotlin/codeMetaInfo/CodeMetaInfoParser.kt:12`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/test-infrastructure-utils/testFixtures/org/jetbrains/kotlin/codeMetaInfo/CodeMetaInfoParser.kt#L12)
 - **Snippet**:
   ```kotlin
   val openingRegex = """(<!([^"]*?((".*?")(, ".*?")*?)?[^"]*?)!>)""".toRegex()
@@ -63,7 +63,7 @@ Original copyright applies to each snippet. See [`../../NOTICE.md`](../../NOTICE
 ## `AbstractKotlinCompilerTest` location
 
 ### Claim: `configure(builder)` is the abstract user hook, `configuration` is a property
-- **File**: [`kotlin/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/AbstractKotlinCompilerTest.kt:63-107`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/AbstractKotlinCompilerTest.kt#L63-L107)
+- **File**: [`kotlin/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/AbstractKotlinCompilerTest.kt:70-113`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/AbstractKotlinCompilerTest.kt#L70-L113)
 - **Snippet**:
   ```kotlin
   protected val configuration: TestConfigurationBuilder.() -> Unit = {
@@ -84,7 +84,7 @@ Original copyright applies to each snippet. See [`../../NOTICE.md`](../../NOTICE
   Confirms: `configuration` is a `val` (lambda-typed property) — overriding it as `fun configuration(...)` does not compile; the user-facing extension point is the abstract `configure(builder)`.
 
 ### Claim: "the common base class" lives in `tests-common-new/testFixtures`
-- **File**: [`kotlin/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/AbstractKotlinCompilerTest.kt:29`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/AbstractKotlinCompilerTest.kt#L29)
+- **File**: [`kotlin/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/AbstractKotlinCompilerTest.kt:34`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/AbstractKotlinCompilerTest.kt#L34)
 - **Snippet**:
   ```kotlin
   abstract class AbstractKotlinCompilerTest {
@@ -95,11 +95,39 @@ Original copyright applies to each snippet. See [`../../NOTICE.md`](../../NOTICE
           )
   ```
 
+## Box-test base class (2.4.20 rename)
+
+### Claim: box runners extend `AbstractJvmBlackBoxCodegenTestBase(parser: FirParser)` on 2.4.20; `AbstractFirBlackBoxCodegenTestBase` no longer exists
+- **File**: [`kotlin/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/codegen/AbstractJvmBlackBoxCodegenTestBase.kt:23-25`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/codegen/AbstractJvmBlackBoxCodegenTestBase.kt#L23-L25)
+- **Snippet**:
+  ```kotlin
+  abstract class AbstractJvmBlackBoxCodegenTestBase(
+      val parser: FirParser,
+  ) : AbstractKotlinCompilerWithTargetBackendTest(TargetBackend.JVM_IR) {
+  ```
+- Through v2.4.10 the same file declared `abstract class AbstractJvmBlackBoxCodegenTestBase<R : ResultingArtifact.FrontendOutput<R>>(val targetFrontend: FrontendKind<R>)` with abstract `frontendFacade` / `frontendToBackendConverter` / `backendFacade` properties, and `runners/codegen/AbstractFirBlackBoxCodegenTest.kt` supplied the FIR-specific subclass `AbstractFirBlackBoxCodegenTestBase(val parser: FirParser)`. Upstream commit `75cdc5ef74c4` ("[Tests] Simplify `AbstractJvmBlackBoxCodegenTestBase` hierarchy", KT-85292) deleted `AbstractFirBlackBoxCodegenTest.kt` and moved the `parser` constructor parameter plus the FIR handler wiring into `AbstractJvmBlackBoxCodegenTestBase` itself (`git -C <clone> log --diff-filter=D --oneline v2.4.10..v2.4.20 -- compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/codegen/AbstractFirBlackBoxCodegenTest.kt`).
+- The parser-pinning leaf classes survived the move and keep their names — [`AbstractJvmBlackBoxCodegenTestBase.kt:64-67`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/codegen/AbstractJvmBlackBoxCodegenTestBase.kt#L64-L67):
+  ```kotlin
+  open class AbstractFirLightTreeBlackBoxCodegenTest : AbstractJvmBlackBoxCodegenTestBase(FirParser.LightTree)
+
+  @FirPsiCodegenTest
+  open class AbstractFirPsiBlackBoxCodegenTest : AbstractJvmBlackBoxCodegenTestBase(FirParser.Psi)
+  ```
+- Same-release rewiring inside the base (no user-facing signature change): `configure` now calls `setupJvmPipelineSteps(parser)` ([`configuration/BaseCodegenConfiguration.kt:71`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/configuration/BaseCodegenConfiguration.kt#L71)) instead of `commonConfigurationForJvmTest(...)` + `configureFirParser(parser)`, and registers `BlackBoxCodegenSuppressor` via `useFailureSuppressors` instead of `useAfterAnalysisCheckers`.
+
+### Claim: `RUN_PIPELINE_TILL` is mandatory — missing directive fails with "Please specify the test phase in `// RUN_PIPELINE_TILL` directive"
+- **File**: [`kotlin/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/services/PhasedPipelineChecker.kt:128`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/services/PhasedPipelineChecker.kt#L128)
+- **Snippet**:
+  ```kotlin
+  return createDiffsForAllTestDataFiles("Please specify the test phase in `// RUN_PIPELINE_TILL` directive") {
+  ```
+- `PhasedPipelineChecker` is a `TestFailureSuppressor` at v2.4.20 (`PhasedPipelineChecker.kt:18-21`) and `AbstractFirPhasedDiagnosticTest` registers it through `useFailureSuppressors(::PhasedPipelineChecker, ::FirFailingTestSuppressor)` ([`AbstractFirPhasedDiagnosticTest.kt:62`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/AbstractFirPhasedDiagnosticTest.kt#L62)); at v2.4.10 it was an after-analysis checker registered via `useAfterAnalysisCheckers`. The directive itself is [`TestPhaseDirectives.kt:17`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/directives/TestPhaseDirectives.kt#L17) (`val RUN_PIPELINE_TILL by enumDirective<TestPhase>(`).
+
 ## Empirically-observed framework behaviours (no permalink — sourced from running the framework)
 
 ### Claim: `IGNORE_DEXING` skips a D8/R8 step that requires `com.android.tools.r8.origin.Origin`
 - **Status**: Observed empirically when running a `kotlin("jvm")`-only plugin's `:plugin:test` task without R8 on the test classpath. Symptom: `NoClassDefFoundError: com/android/tools/r8/origin/Origin` at test startup, before any test data is loaded. Adding `+CodegenTestDirectives.IGNORE_DEXING` to `defaultDirectives` resolves it. No permalink — the relevant pipeline wiring lives in the test framework's backend handlers and is not stable across patch releases.
-- See also: the `IGNORE_DEXING` directive itself is declared at [`CodegenTestDirectives.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/directives/CodegenTestDirectives.kt) (search for the symbol — line number drifts).
+- See also: the `IGNORE_DEXING` directive itself is declared at [`CodegenTestDirectives.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/directives/CodegenTestDirectives.kt) (search for the symbol — line number drifts).
 
 ### Claim: extending concrete `AbstractFirLightTreeBlackBoxCodegenTest` / `AbstractFirPsiBlackBoxCodegenTest` as a test base throws `IllegalArgumentException`
 - **Status**: Observed empirically. Those classes implement `RunnerWithTargetBackendForTestGeneratorMarker`; the generator-side check that produces the exception lives in the test-generator infrastructure. The corrective action is to extend the parameterized `*Base` class instead. Permalink omitted because the exception originates from a private generator-side `require(...)` that has been renamed between patch releases.
@@ -108,7 +136,7 @@ Original copyright applies to each snippet. See [`../../NOTICE.md`](../../NOTICE
 
 ### Claim: `parcelize-compiler/parcelize.k2/` exists for K2 frontend extension sources
 - **Path**: `kotlin/plugins/parcelize/parcelize-compiler/parcelize.k2/`
-- Sibling directories at `parcelize-compiler/` at v2.4.10: `parcelize.backend`, `parcelize.cli`, `parcelize.common`, `parcelize.k1`, `parcelize.k2`, `testData`, `testFixtures`, `tests` (and `build.gradle.kts`). Note: parcelize dropped its separate `tests-gen/` directory in 2.4.0 — the generated suites now live under `tests/`.
+- Sibling directories at `parcelize-compiler/` at v2.4.20: `parcelize.backend`, `parcelize.cli`, `parcelize.common`, `parcelize.k1`, `parcelize.k2`, `testData`, `testFixtures`, `tests` (and `build.gradle.kts`). Note: parcelize dropped its separate `tests-gen/` directory in 2.4.0 — the generated suites now live under `tests/`.
 - Generated JUnit test classes are produced by `generateTestGroupSuiteWithJUnit5` from `testData/` — the same mechanism Pattern B in guide.md exposes for standalone projects (where it lives at `compiler-plugin/test-gen/`). Many monorepo plugins still keep these in a dedicated `tests-gen/` directory; parcelize folded them into `tests/`.
 
 ### Claim: `allopen/testFixtures/` (tests live at the `allopen/` level, not inside `allopen.k2/`)
@@ -117,20 +145,20 @@ Original copyright applies to each snippet. See [`../../NOTICE.md`](../../NOTICE
 
 ### Claim: `power-assert/` gained a `power-assert-compiler/` parent in 2.4.0
 - **Path**: `kotlin/plugins/power-assert/power-assert-compiler/`
-- Direct subdirectories of `power-assert/` at v2.4.10: `power-assert-compiler`, `power-assert-runtime`. Under `power-assert-compiler/`: `power-assert.backend`, `power-assert.cli`, `power-assert.common`, `power-assert.embeddable`, `power-assert.frontend`, `testData`, `testFixtures` (and `build.gradle.kts`).
+- Direct subdirectories of `power-assert/` at v2.4.20: `power-assert-compiler`, `power-assert-runtime`. Under `power-assert-compiler/`: `power-assert.backend`, `power-assert.cli`, `power-assert.common`, `power-assert.embeddable`, `power-assert.frontend`, `testData`, `testFixtures` (and `build.gradle.kts`).
 - Through 2.3.x `power-assert/` used a *flat* layout (the implementation modules — `power-assert.backend`, `power-assert.cli`, `power-assert.embeddable` — sat directly under the plugin root, with no intermediary). In 2.4.0 it was restructured to the `parcelize`-style `<plugin>-compiler/` shape, plus a separate `power-assert-runtime/` module.
 
 ## `box(): String` runner convention
 
 ### Claim: "must return exactly `\"OK\"` to pass"
-- **File**: [`kotlin/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/backend/handlers/JvmBoxRunner.kt:47`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/backend/handlers/JvmBoxRunner.kt#L47)
+- **File**: [`kotlin/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/backend/handlers/JvmBoxRunner.kt:53`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/backend/handlers/JvmBoxRunner.kt#L53)
 - **Snippet**:
   ```kotlin
   private const val DEFAULT_EXPECTED_RESULT = "OK"
   ```
 
 ### Claim: "The runner ... executes `box()`"
-- **File**: [`kotlin/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/backend/handlers/JvmBoxRunner.kt:311`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/backend/handlers/JvmBoxRunner.kt#L311)
+- **File**: [`kotlin/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/backend/handlers/JvmBoxRunner.kt:329`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/backend/handlers/JvmBoxRunner.kt#L329)
 - **Snippet**:
   ```kotlin
   private fun Class<*>.getBoxMethodOrNull(): Method? {
@@ -143,14 +171,14 @@ Original copyright applies to each snippet. See [`../../NOTICE.md`](../../NOTICE
   ```
 
 ### Claim: Runner invokes `box()` and compares its `String` return
-- **File**: [`kotlin/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/backend/handlers/JvmBoxRunner.kt:170`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/backend/handlers/JvmBoxRunner.kt#L170)
+- **File**: [`kotlin/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/backend/handlers/JvmBoxRunner.kt:179`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/backend/handlers/JvmBoxRunner.kt#L179)
 - **Snippet**:
   ```kotlin
   method.invoke(null) as String
   ```
 
 ### Claim: "Codegen test should contain one global `fun box()`"
-- **File**: [`kotlin/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/services/SplittingModuleTransformerForBoxTests.kt:50`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/services/SplittingModuleTransformerForBoxTests.kt#L50)
+- **File**: [`kotlin/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/services/SplittingModuleTransformerForBoxTests.kt:50`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/services/SplittingModuleTransformerForBoxTests.kt#L50)
 - **Snippet**:
   ```kotlin
   val boxFiles = realFiles.filter { it.originalContent.contains("fun box()") || it.name == "entry.mjs" }
@@ -166,10 +194,10 @@ Maven Central existence checked directly (HTTP 200 on the POM):
 - `https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-compiler-internal-test-framework/2.3.20/kotlin-compiler-internal-test-framework-2.3.20.pom`
 - `https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-compiler-internal-test-framework/2.3.21/kotlin-compiler-internal-test-framework-2.3.21.pom`
 
-Note on version: the template's `gradle/libs.versions.toml` (linked snippet below) currently pins `kotlin = "2.3.20"`, while this skill standardizes on `2.4.0`. The published artifact exists at all of these versions, and the two abstract bases referenced later in this section are unchanged across them (signatures identical at v2.3.20, v2.3.21, and v2.4.0; only line numbers drifted) — verified by direct comparison:
+Note on version: the template's `gradle/libs.versions.toml` (linked snippet below) currently pins `kotlin = "2.3.20"`, while this skill standardizes on `2.4.20`. The published artifact exists at all of these versions. The diagnostic base is unchanged across them (signature identical at v2.3.20, v2.3.21, v2.4.0 and v2.4.20; only line numbers drifted); the box base was **renamed in 2.4.20** — verified by direct comparison:
 
-- [`AbstractFirPhasedDiagnosticTest.kt` at v2.3.20 line 36](https://github.com/JetBrains/kotlin/blob/v2.3.20/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/AbstractFirPhasedDiagnosticTest.kt#L36) and [v2.4.0 line 39](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/AbstractFirPhasedDiagnosticTest.kt#L39): identical signature `abstract class AbstractFirPhasedDiagnosticTest(val parser: FirParser) : AbstractKotlinCompilerWithTargetBackendTest(TargetBackend.JVM_IR)`.
-- [`AbstractFirBlackBoxCodegenTest.kt` at v2.3.20 line 29](https://github.com/JetBrains/kotlin/blob/v2.3.20/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/codegen/AbstractFirBlackBoxCodegenTest.kt#L29) and [v2.4.0 line 31](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/codegen/AbstractFirBlackBoxCodegenTest.kt#L31): identical declaration `abstract class AbstractFirBlackBoxCodegenTestBase(val parser: FirParser) : AbstractJvmBlackBoxCodegenTestBase<FirOutputArtifact>(FrontendKinds.FIR)`.
+- [`AbstractFirPhasedDiagnosticTest.kt` at v2.3.20 line 36](https://github.com/JetBrains/kotlin/blob/v2.3.20/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/AbstractFirPhasedDiagnosticTest.kt#L36) and [v2.4.20 line 30](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/AbstractFirPhasedDiagnosticTest.kt#L30): identical signature `abstract class AbstractFirPhasedDiagnosticTest(val parser: FirParser) : AbstractKotlinCompilerWithTargetBackendTest(TargetBackend.JVM_IR)`.
+- [`AbstractFirBlackBoxCodegenTest.kt` at v2.3.20 line 29](https://github.com/JetBrains/kotlin/blob/v2.3.20/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/codegen/AbstractFirBlackBoxCodegenTest.kt#L29) through v2.4.10 line 31 declared `abstract class AbstractFirBlackBoxCodegenTestBase(val parser: FirParser) : AbstractJvmBlackBoxCodegenTestBase<FirOutputArtifact>(FrontendKinds.FIR)`. That file no longer exists at v2.4.20; the replacement is [`AbstractJvmBlackBoxCodegenTestBase.kt` at v2.4.20 lines 23-25](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/tests-common-new/testFixtures/org/jetbrains/kotlin/test/runners/codegen/AbstractJvmBlackBoxCodegenTestBase.kt#L23-L25) — see the dedicated claim below.
 
 - **File**: [`Kotlin/compiler-plugin-template/gradle/libs.versions.toml`](https://github.com/Kotlin/compiler-plugin-template/blob/c94e164ac8e970cbf252066c1d233d5787635c29/gradle/libs.versions.toml)
 - **Snippet** (excerpt):
@@ -257,7 +285,7 @@ The word "internal" in the artifact name signals that the API surface has no sta
       }
   }
   ```
-- Both `AbstractFirPhasedDiagnosticTest` and `AbstractFirBlackBoxCodegenTestBase` are exported by `kotlin-compiler-internal-test-framework`; nothing here requires running inside the Kotlin monorepo.
+- Both `AbstractFirPhasedDiagnosticTest` and the box base are exported by `kotlin-compiler-internal-test-framework`; nothing here requires running inside the Kotlin monorepo. The template snippet above is quoted verbatim and still names `AbstractFirBlackBoxCodegenTestBase`, which is correct for the template's pinned 2.3.20 and for every release through 2.4.10; on 2.4.20 the superclass is `AbstractJvmBlackBoxCodegenTestBase(FirParser.LightTree)` (see the "Box-test base class (2.4.20 rename)" claim above and `CHANGES.md`).
 
 ### Claim: plugin extensions are registered via `EnvironmentConfigurator` inside the test runner
 

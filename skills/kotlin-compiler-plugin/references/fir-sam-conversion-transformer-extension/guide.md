@@ -7,7 +7,7 @@ description: Customize the function type used during Kotlin's SAM (Single Abstra
 
 This is the K2 extension point that lets a plugin **rewrite the function-type signature used when converting a lambda to a SAM interface**. The most common use is the "SAM with receiver" pattern: given `interface Sam { void run(String a) }`, instead of expecting a `(String) -> Unit` lambda, the plugin makes the resolver expect `String.() -> Unit` so the user can write `{ this.length }` rather than `{ a -> a.length }`. This is exactly what the official `sam-with-receiver` plugin does (used by Gradle's Kotlin DSL among others).
 
-Source: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/resolve/FirSamConversionTransformerExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/resolve/FirSamConversionTransformerExtension.kt). Reference impls: [`kotlin/plugins/sam-with-receiver/sam-with-receiver.k2/src/org/jetbrains/kotlin/samWithReceiver/k2/FirSamWithReceiverConventionTransformer.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.10/plugins/sam-with-receiver/sam-with-receiver.k2/src/org/jetbrains/kotlin/samWithReceiver/k2/FirSamWithReceiverConventionTransformer.kt) and the scripting plugin's mirror.
+Source: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/resolve/FirSamConversionTransformerExtension.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/resolve/FirSamConversionTransformerExtension.kt). Reference impls: [`kotlin/plugins/sam-with-receiver/sam-with-receiver.k2/src/org/jetbrains/kotlin/samWithReceiver/k2/FirSamWithReceiverConventionTransformer.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.20/plugins/sam-with-receiver/sam-with-receiver.k2/src/org/jetbrains/kotlin/samWithReceiver/k2/FirSamWithReceiverConventionTransformer.kt) and the scripting plugin's mirror.
 
 ## What you get
 
@@ -26,7 +26,7 @@ Single method, single decision. The resolver hands you the **abstract method of 
 
 ## When the resolver calls this extension
 
-`FirSamResolver.resolveFunctionTypeIfSamInterface` (`compiler/fir/resolve/src/.../FirSamResolver.kt:287-289` at v2.3.21):
+`FirSamResolver.resolveFunctionTypeIfSamInterface` (`compiler/fir/resolve/src/.../FirSamResolver.kt:305-307` at v2.4.20):
 
 ```kotlin
 val typeFromExtension = samConversionTransformers.firstNotNullOfOrNull {

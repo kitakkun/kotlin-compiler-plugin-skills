@@ -8,7 +8,7 @@ Primary-source citations against `/Users/kitakkun/Documents/GitHub/kotlin-lang/`
 
 Note: at v2.4.0 the list dropped to 17 entries — `FirReplSnippetResolveExtension` (it was entry #15 through 2.3.x) is no longer registered here and no longer appears anywhere in this file.
 
-- **File**: [`kotlin/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt:23-43`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt#L23-L43)
+- **File**: [`kotlin/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt:23-43`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt#L23-L43)
 - **Snippet**:
   ```kotlin
   internal val AVAILABLE_EXTENSIONS = listOf(
@@ -38,7 +38,7 @@ Note: at v2.4.0 the list dropped to 17 entries — `FirReplSnippetResolveExtensi
 
 ### Claim: "`FirExtensionRegistrarAdapter` is the bridge between the plugin-API world (where `ExtensionStorage` lives) and the FIR world."
 
-- **File**: [`kotlin/compiler/frontend.common/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrarAdapter.kt:21-26`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/frontend.common/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrarAdapter.kt#L21-L26)
+- **File**: [`kotlin/compiler/frontend.common/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrarAdapter.kt:21-26`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/frontend.common/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrarAdapter.kt#L21-L26)
 - **Snippet**:
   ```kotlin
   abstract class FirExtensionRegistrarAdapter {
@@ -54,16 +54,16 @@ Note: at v2.4.0 the list dropped to 17 entries — `FirReplSnippetResolveExtensi
 
 ### Claim: "A constructor reference: `+::MyDeclarationGenerator` where the constructor takes a `FirSession`."
 
-- **File**: [`kotlin/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt:61-232`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt#L61-L232)
+- **File**: [`kotlin/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt:61-232`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt#L61-L232)
 - **Snippet** (representative pair: factory + reference overload):
   ```kotlin
-  // Factory overload (around line 61-63 at v2.4.10)
+  // Factory overload (around line 61-63 at v2.4.20)
   @JvmName("plusClassGenerationExtension")
   operator fun (FirDeclarationGenerationExtension.Factory).unaryPlus() {
       registerExtension(FirDeclarationGenerationExtension::class, this)
   }
 
-  // Reference / lambda overload (around line 150-153 at v2.4.10)
+  // Reference / lambda overload (around line 150-153 at v2.4.20)
   @JvmName("plusClassGenerationExtension")
   operator fun ((FirSession) -> FirDeclarationGenerationExtension).unaryPlus() {
       FirDeclarationGenerationExtension.Factory { this.invoke(it) }.unaryPlus()
@@ -75,7 +75,7 @@ Note: at v2.4.0 the list dropped to 17 entries — `FirReplSnippetResolveExtensi
 
 ### Claim: "The `FirExtensionRegistrar` exposes `registerDiagnosticContainers(...)` for this."
 
-- **File**: [`kotlin/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt:234-236`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt#L234-L236)
+- **File**: [`kotlin/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt:234-236`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt#L234-L236)
 - **Snippet**:
   ```kotlin
   fun registerDiagnosticContainers(vararg diagnosticContainers: KtDiagnosticsContainer) {
@@ -85,7 +85,7 @@ Note: at v2.4.0 the list dropped to 17 entries — `FirReplSnippetResolveExtensi
 
 ### Claim: "The call is silently a no-op for Library sessions."
 
-- **File**: [`kotlin/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt:324-326`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt#L324-L326)
+- **File**: [`kotlin/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt:324-326`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt#L324-L326)
 - **Snippet**:
   ```kotlin
   if (session.kind == FirSession.Kind.Source) {
@@ -97,17 +97,17 @@ Note: at v2.4.0 the list dropped to 17 entries — `FirReplSnippetResolveExtensi
 
 ### Claim: "`FirFunctionCallRefinementExtension` and `FirMetadataSerializerPlugin` are gated behind `@FirExtensionApiInternals`."
 
-- **Definition**: [`kotlin/compiler/fir/tree/src/org/jetbrains/kotlin/fir/extensions/FirExtension.kt:47-48`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/tree/src/org/jetbrains/kotlin/fir/extensions/FirExtension.kt#L47-L48)
+- **Definition**: [`kotlin/compiler/fir/tree/src/org/jetbrains/kotlin/fir/extensions/FirExtension.kt:47-48`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/tree/src/org/jetbrains/kotlin/fir/extensions/FirExtension.kt#L47-L48)
   ```kotlin
   @RequiresOptIn
   annotation class FirExtensionApiInternals
   ```
-- **`FirFunctionCallRefinementExtension`**: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirFunctionCallRefinementExtension.kt:34-35`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirFunctionCallRefinementExtension.kt#L34-L35)
+- **`FirFunctionCallRefinementExtension`**: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirFunctionCallRefinementExtension.kt:46-47`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirFunctionCallRefinementExtension.kt#L46-L47)
   ```kotlin
   @FirExtensionApiInternals
   abstract class FirFunctionCallRefinementExtension(session: FirSession) : FirExtension(session) {
   ```
-- **`FirMetadataSerializerPlugin`**: [`kotlin/compiler/fir/fir-serialization/src/org/jetbrains/kotlin/fir/serialization/FirMetadataSerializerPlugin.kt:25-26`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/fir-serialization/src/org/jetbrains/kotlin/fir/serialization/FirMetadataSerializerPlugin.kt#L25-L26)
+- **`FirMetadataSerializerPlugin`**: [`kotlin/compiler/fir/fir-serialization/src/org/jetbrains/kotlin/fir/serialization/FirMetadataSerializerPlugin.kt:25-26`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/fir-serialization/src/org/jetbrains/kotlin/fir/serialization/FirMetadataSerializerPlugin.kt#L25-L26)
   ```kotlin
   @FirExtensionApiInternals
   abstract class FirMetadataSerializerPlugin(session: FirSession) : FirExtension(session) {
@@ -117,7 +117,7 @@ Note: at v2.4.0 the list dropped to 17 entries — `FirReplSnippetResolveExtensi
 
 ### Claim: "Only `FirTypeAttributeExtension` and `FirFunctionTypeKindExtension` run in library sessions."
 
-- **File**: [`kotlin/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt:45-48`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt#L45-L48)
+- **File**: [`kotlin/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt:45-48`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt#L45-L48)
 - **Snippet**:
   ```kotlin
   internal val ALLOWED_EXTENSIONS_FOR_LIBRARY_SESSION = listOf(
@@ -130,7 +130,7 @@ Note: at v2.4.0 the list dropped to 17 entries — `FirReplSnippetResolveExtensi
 
 ### Claim: "Every FIR extension class has a constructor taking exactly one `FirSession`."
 
-- **File**: [`kotlin/compiler/fir/tree/src/org/jetbrains/kotlin/fir/extensions/FirExtension.kt:25-32`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/tree/src/org/jetbrains/kotlin/fir/extensions/FirExtension.kt#L25-L32)
+- **File**: [`kotlin/compiler/fir/tree/src/org/jetbrains/kotlin/fir/extensions/FirExtension.kt:25-32`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/tree/src/org/jetbrains/kotlin/fir/extensions/FirExtension.kt#L25-L32)
 - **Snippet**:
   ```kotlin
   abstract class FirExtension(val session: FirSession) {
@@ -148,7 +148,7 @@ Note: at v2.4.0 the list dropped to 17 entries — `FirReplSnippetResolveExtensi
 
 ### Claim: "Every non-trivial plugin uses `FirExtensionSessionComponent` for state sharing."
 
-- **File**: [`kotlin/compiler/fir/tree/src/org/jetbrains/kotlin/fir/extensions/FirExtensionSessionComponent.kt:12-29`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/tree/src/org/jetbrains/kotlin/fir/extensions/FirExtensionSessionComponent.kt#L12-L29)
+- **File**: [`kotlin/compiler/fir/tree/src/org/jetbrains/kotlin/fir/extensions/FirExtensionSessionComponent.kt:12-29`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/tree/src/org/jetbrains/kotlin/fir/extensions/FirExtensionSessionComponent.kt#L12-L29)
 - **Snippet**:
   ```kotlin
   abstract class FirExtensionSessionComponent(session: FirSession) : FirExtension(session), FirSessionComponent {
@@ -172,7 +172,7 @@ Note: at v2.4.0 the list dropped to 17 entries — `FirReplSnippetResolveExtensi
 
 ### Claim: "The `by FirSession.sessionComponentAccessor()` pattern at file top level is canonical."
 
-- **File**: [`kotlin/compiler/fir/tree/src/org/jetbrains/kotlin/fir/FirSession.kt:19-22`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/tree/src/org/jetbrains/kotlin/fir/FirSession.kt#L19-L22)
+- **File**: [`kotlin/compiler/fir/tree/src/org/jetbrains/kotlin/fir/FirSession.kt:19-22`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/tree/src/org/jetbrains/kotlin/fir/FirSession.kt#L19-L22)
 - **Snippet**:
   ```kotlin
   companion object : ConeTypeRegistry<FirSessionComponent, FirSessionComponent>() {
@@ -182,7 +182,7 @@ Note: at v2.4.0 the list dropped to 17 entries — `FirReplSnippetResolveExtensi
       // ... with-default and id-based variants follow at lines 25-37
   }
   ```
-  Real-world usage example — [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirRegisteredPluginAnnotations.kt:148`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirRegisteredPluginAnnotations.kt#L148):
+  Real-world usage example — [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirRegisteredPluginAnnotations.kt:148`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirRegisteredPluginAnnotations.kt#L148):
   ```kotlin
   val FirSession.registeredPluginAnnotations: FirRegisteredPluginAnnotations by FirSession.sessionComponentAccessor()
   ```
@@ -191,7 +191,7 @@ Note: at v2.4.0 the list dropped to 17 entries — `FirReplSnippetResolveExtensi
 
 ### Claim: "Predicates registered by *any* extension share a session-wide index" / "the pipeline collects matching declarations through `FirPredicateBasedProvider`."
 
-- **File**: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirRegisteredPluginAnnotations.kt:97-120`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirRegisteredPluginAnnotations.kt#L97-L120)
+- **File**: [`kotlin/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirRegisteredPluginAnnotations.kt:97-120`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/resolve/src/org/jetbrains/kotlin/fir/extensions/FirRegisteredPluginAnnotations.kt#L97-L120)
 - **Snippet**:
   ```kotlin
   @PluginServicesInitialization
@@ -218,7 +218,7 @@ Note: at v2.4.0 the list dropped to 17 entries — `FirReplSnippetResolveExtensi
       }
   }
   ```
-  Called from the session bootstrap at [`kotlin/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt:323`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt#L323):
+  Called from the session bootstrap at [`kotlin/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt:323`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/entrypoint/src/org/jetbrains/kotlin/fir/extensions/FirExtensionRegistrar.kt#L323):
   ```kotlin
   session.registeredPluginAnnotations.initialize()
   ```

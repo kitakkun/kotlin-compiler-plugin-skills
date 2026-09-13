@@ -1,6 +1,37 @@
 # Changes affecting this skill
 
-API migrations relevant to generating synthetic IR classes. This skill targets the **current stable Kotlin** (2.4.0).
+API migrations relevant to generating synthetic IR classes. This skill targets the **current stable Kotlin** (2.4.20).
+
+## Kotlin 2.4.10 → 2.4.20: `registerClassAsMetadataVisible` and `registerPropertyAsMetadataVisible` added
+
+`IrGeneratedDeclarationsRegistrar` (reached via `pluginContext.metadataDeclarationRegistrar`) gained two new abstract members ([`compiler/ir/backend.common/src/org/jetbrains/kotlin/backend/common/extensions/IrGeneratedDeclarationsRegistrar.kt:26-27`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/ir/backend.common/src/org/jetbrains/kotlin/backend/common/extensions/IrGeneratedDeclarationsRegistrar.kt#L26-L27)):
+
+```kotlin
+abstract fun registerPropertyAsMetadataVisible(irProperty: IrProperty)   // KT-63881, replaces the old TODO
+abstract fun registerClassAsMetadataVisible(irClass: IrClass)            // KT-79565 (parts 1-3: top-level, nested, inner)
+```
+
+- `registerPropertyAsMetadataVisible` requires the property to have a getter (`error("Property without getter is not supported")`, [`compiler/fir/fir2ir/src/org/jetbrains/kotlin/fir/backend/Fir2IrIrGeneratedDeclarationsRegistrar.kt:176-177`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/fir2ir/src/org/jetbrains/kotlin/fir/backend/Fir2IrIrGeneratedDeclarationsRegistrar.kt#L176-L177)); local properties are skipped.
+- `registerClassAsMetadataVisible` builds a FIR class for the IR class and then recursively registers its constructors, non-accessor functions, properties, and nested/inner classes, skipping `FAKE_OVERRIDE` members ([`compiler/fir/fir2ir/src/org/jetbrains/kotlin/fir/backend/Fir2IrIrGeneratedDeclarationsRegistrar.kt:421-437`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/fir2ir/src/org/jetbrains/kotlin/fir/backend/Fir2IrIrGeneratedDeclarationsRegistrar.kt#L421-L437)). Enum classes throw ([`compiler/fir/fir2ir/src/org/jetbrains/kotlin/fir/backend/Fir2IrIrGeneratedDeclarationsRegistrar.kt:356-358`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/fir2ir/src/org/jetbrains/kotlin/fir/backend/Fir2IrIrGeneratedDeclarationsRegistrar.kt#L356-L358)). Sealed subclasses are recorded from `irClass.sealedSubclasses`.
+- If you subclass `IrGeneratedDeclarationsRegistrar` yourself (test doubles, custom pipelines) you must now implement both new members; the built-in non-FIR `IrPluginContextImpl` registrar implements them as no-ops.
+
+**Before (2.4.10 and older)** — properties could not be registered at all, classes only member by member:
+
+```kotlin
+val registrar = pluginContext.metadataDeclarationRegistrar
+newClass.functions.forEach { fn -> if (fn is IrSimpleFunction) registrar.registerFunctionAsMetadataVisible(fn) }
+newClass.constructors.forEach { registrar.registerConstructorAsMetadataVisible(it) }
+// properties: silently missing from downstream metadata
+```
+
+**After (2.4.20)**:
+
+```kotlin
+enclosingFile.declarations += newClass          // parent, superTypes, members, sealedSubclasses all set
+pluginContext.metadataDeclarationRegistrar.registerClassAsMetadataVisible(newClass)
+```
+
+**Migration**: for whole synthetic classes, replace the per-member loop with one `registerClassAsMetadataVisible` call on the outermost class (do not also register the members individually). For a single member attached to an existing source class, keep `registerFunctionAsMetadataVisible` / `registerConstructorAsMetadataVisible`, and use `registerPropertyAsMetadataVisible` for properties. Plugins that must compile against both 2.4.10 and 2.4.20 need a version-split (see `multi-version-kotlin-support`), since the members do not exist on the older abstract class. Note that the guide's earlier claim "there is no `registerClassAsMetadataVisible`" (below, under 2.2 → 2.3) is only true through 2.4.10.
 
 ## Kotlin 2.3 → 2.4: metadata-annotation API uses `IrAnnotation`
 
@@ -37,7 +68,7 @@ val newClass = factory.buildClass { ... }.apply {
 
 ## Kotlin 2.2 → 2.3
 
-### `IrGeneratedDeclarationsRegistrar` does NOT have `registerClassAsMetadataVisible`
+### `IrGeneratedDeclarationsRegistrar` does NOT have `registerClassAsMetadataVisible` (true through 2.4.10 — added in 2.4.20, see the top of this file)
 
 Some early tutorials suggested:
 
@@ -52,9 +83,9 @@ The actual `IrGeneratedDeclarationsRegistrar` API (verified against source) has 
 - `addMetadataVisibleAnnotationsToElement(IrDeclaration, List<IrConstructorCall>)`  *(plus a `vararg IrConstructorCall` convenience overload)*
 - `addCustomMetadataExtension(...)`
 
-(KT-63881 tracks adding `registerPropertyAsMetadataVisible`. There is currently no whole-class registration method.)
+(KT-63881 tracked adding `registerPropertyAsMetadataVisible`; both it and `registerClassAsMetadataVisible` landed in 2.4.20.)
 
-**Migration**: register every member individually:
+**Migration** (for Kotlin ≤ 2.4.10): register every member individually:
 
 ```kotlin
 val registrar = pluginContext.metadataDeclarationRegistrar

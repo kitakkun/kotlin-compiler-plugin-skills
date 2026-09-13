@@ -7,7 +7,7 @@ description: Scaffold a new Kotlin compiler plugin project from scratch — mult
 
 This skill produces a working **multi-module Gradle project** containing a Kotlin compiler plugin and a sample module that consumes it. The plugin loads, runs during compilation, and can observe or transform IR.
 
-A related working example lives at `skills/compiler-plugin-bootstrap/example/` (`hello-plugin`), pinned to Kotlin 2.4.10. It demonstrates the same module layout and `META-INF/services` wiring but uses simpler `println` / file I/O for plugin-side logging instead of the `MessageCollector` pattern shown in this skill — treat it as a structural reference, not as a verbatim companion to the text below. The instructions below are self-contained.
+A related working example lives at `skills/kotlin-compiler-plugin/references/compiler-plugin-bootstrap/example/` (`hello-plugin`), pinned to Kotlin 2.4.20. It demonstrates the same module layout and `META-INF/services` wiring but uses simpler `println` / file I/O for plugin-side logging instead of the `MessageCollector` pattern shown in this skill — treat it as a structural reference, not as a verbatim companion to the text below. The instructions below are self-contained.
 
 ## Conceptual primer
 
@@ -69,13 +69,13 @@ The Foojay Toolchain Resolver lets Gradle download the JDK declared by `jvmToolc
 ```properties
 # Optional: only needed if your default JDK is Java 22 or newer.
 #
-# Workaround for Kotlin BTAPI / JDK 25 (verified on 2.3.20, 2.3.21, 2.4.0, and 2.4.10):
+# Workaround for Kotlin BTAPI / JDK 25 (verified on 2.3.20, 2.3.21, 2.4.0, and 2.4.10;
+# 2.4.20 bundles the same IntelliJ SDK build, so keep it there too):
 # it bundles a Kotlin compiler that fails to parse Java 25's version
 # string ("25.0.2"). On macOS hosts where Homebrew's `openjdk` formula
 # now ships Java 25 as the system default, pinning the launcher to
 # JDK 21 avoids `IllegalArgumentException: 25.0.2` from
-# `JavaVersion.parse`. Still present in Kotlin 2.4.10 (bundled IntelliJ
-# `JavaVersion` unchanged from 2.3.x) — keep this pin.
+# `JavaVersion.parse` (bundled IntelliJ `JavaVersion` unchanged since 2.3.x).
 #
 # Skip this entire file if `gradle --version` already reports a Launcher
 # JVM you are happy with (typically JDK 21).
@@ -90,7 +90,7 @@ The Foojay Toolchain Resolver lets Gradle download the JDK declared by `jvmToolc
 # org.gradle.java.home=/REPLACE/WITH/PATH/TO/jdk-21
 ```
 
-If you skip this, you need to either invoke Gradle with `JAVA_HOME` pointing at JDK 21, or keep your system default at JDK 21. Skip the pin entirely once you confirm `gradle --version` shows a launcher JVM that can parse Java 25 (Kotlin 2.4+ likely fixes this).
+If you skip this, you need to either invoke Gradle with `JAVA_HOME` pointing at JDK 21, or keep your system default at JDK 21. Skip the pin only once a Kotlin release bumps the bundled IntelliJ SDK (`versions.intellijSdk` in `gradle/versions.properties`) — 2.4.20 still ships the same build.
 
 ## Root build.gradle.kts
 
@@ -121,7 +121,7 @@ local.properties
 
 ```kotlin
 plugins {
-    kotlin("jvm") version "2.4.10"  // pick the latest 2.4.x at the time you start
+    kotlin("jvm") version "2.4.20"  // pick the latest 2.4.x at the time you start
 }
 
 kotlin {
@@ -129,7 +129,7 @@ kotlin {
 }
 
 dependencies {
-    compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.4.10")
+    compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.4.20")
 }
 ```
 
@@ -162,8 +162,11 @@ import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.config.MessageCollectorAccess
 
-@OptIn(ExperimentalCompilerApi::class)
+// MessageCollectorAccess is required since Kotlin 2.4.20: MESSAGE_COLLECTOR_KEY and
+// CompilerConfiguration.messageCollector are gated behind this @RequiresOptIn marker.
+@OptIn(ExperimentalCompilerApi::class, MessageCollectorAccess::class)
 class MyComponentRegistrar : CompilerPluginRegistrar() {
     override val pluginId: String = MyPluginNames.PLUGIN_ID
     override val supportsK2: Boolean = true
@@ -190,13 +193,15 @@ import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.config.CommonConfigurationKeys
 ```
 
+**`@MessageCollectorAccess` opt-in (Kotlin 2.4.20+).** `CommonConfigurationKeys.MESSAGE_COLLECTOR_KEY` and the `CompilerConfiguration.messageCollector` extension property are annotated with `@org.jetbrains.kotlin.config.MessageCollectorAccess`, a `@RequiresOptIn` marker at the default ERROR level (KT-78277). Without the opt-in the registrar above fails to compile with `OPT_IN_USAGE_ERROR: Direct access to the message collector is discouraged. Consider using CompilerConfiguration.report.` Either annotate the using declaration with `@OptIn(MessageCollectorAccess::class)` as shown, or pass `-opt-in=org.jetbrains.kotlin.config.MessageCollectorAccess` via `freeCompilerArgs` in the plugin module. The suggested `CompilerConfiguration.report(...)` alternative (`org.jetbrains.kotlin.cli.report`) takes a `KtSourcelessDiagnosticFactory`, not a severity, and its sibling helpers (`reportInfo` / `reportLog` / `reportOutput` / `reportException`) have no WARNING variant — so for the "prove the plugin loaded" `w:` line used in this skill, pulling the collector once in the registrar is still the pragmatic choice. The annotation class does not exist in 2.4.10 and earlier; a plugin that must compile against both sides of 2.4.20 needs a per-version source set for the registrar (see [`multi-version-kotlin-support`](../multi-version-kotlin-support/guide.md)).
+
 Three abstract members must be overridden:
 
 | Member | Purpose |
 |---|---|
 | `pluginId: String` | Plugin identifier. Must match the `pluginId` of the corresponding `CommandLineProcessor`. Used by `-Xcompiler-plugin-order` to control plugin ordering. **Required since Kotlin 2.3** — older guides may omit it. ⚠️ The inverse holds for older targets: `pluginId` does **not exist** on `CompilerPluginRegistrar` in Kotlin 2.2.20 and earlier. A plugin compiled against `kotlin-compiler-embeddable:2.2.20` that overrides `pluginId` will fail with "'pluginId' overrides nothing"; a plugin built without it will fail to load on 2.3+ with the inverse error. Multi-version plugins must split their registrar source per Kotlin version. |
-| `supportsK2: Boolean` | Set to `true` for new plugins. K1 (the legacy frontend) is being removed. |
-| `registerExtensions(...)` | Where you wire up the actual extensions. The `ExtensionStorage` receiver provides `registerExtension` as an extension function on `ProjectExtensionDescriptor<T>`; `IrGenerationExtension`'s companion is itself such a descriptor, so `IrGenerationExtension.registerExtension(...)` works directly. |
+| `supportsK2: Boolean` | Set to `true` for new plugins. K1 (the legacy frontend) is being removed; as of Kotlin 2.4.20 the legacy K1 `ComponentRegistrar` interface (deprecated with `ERROR` level since KT-52665) has been deleted from `compiler/plugin-api`, so `CompilerPluginRegistrar` is the only registrar entry point (KT-85816). |
+| `registerExtensions(...)` | Where you wire up the actual extensions. The `ExtensionStorage` receiver provides `registerExtension` as an extension function on `ExtensionPointDescriptor<T>`; `IrGenerationExtension`'s companion is itself such a descriptor, so `IrGenerationExtension.registerExtension(...)` works directly. |
 
 `ExtensionStorage` is the registrar's helper type that collects registered extensions and disposables — you don't construct it; the compiler passes it in as receiver.
 
@@ -326,7 +331,7 @@ For an experimentation harness, depend on the plugin JAR via a custom configurat
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "2.4.10"
+    kotlin("jvm") version "2.4.20"
     application
 }
 
@@ -413,7 +418,7 @@ You're missing `override val pluginId: String = ...` on either `CompilerPluginRe
 
 ### `IllegalArgumentException: 25.0.2` from `JavaVersion.parse`
 
-The Gradle launcher is running on Java 25, but the bundled Kotlin compiler in your Gradle distribution can't parse that version string. See the `gradle.properties` section above — pin `org.gradle.java.home` to JDK 21. Tracked as a Kotlin BTAPI issue — still present in 2.4.10 (the bundled IntelliJ `JavaVersion` is unchanged: `versions.intellijSdk=251.27812.49` in 2.3.21, 2.4.0, and 2.4.10).
+The Gradle launcher is running on Java 25, but the bundled Kotlin compiler in your Gradle distribution can't parse that version string. See the `gradle.properties` section above — pin `org.gradle.java.home` to JDK 21. Tracked as a Kotlin BTAPI issue — still present in 2.4.10 and assumed unchanged in 2.4.20 (the bundled IntelliJ `JavaVersion` is unchanged: `versions.intellijSdk=251.27812.49` in 2.3.21, 2.4.0, 2.4.10, and 2.4.20).
 
 ### Plugin compiles, build succeeds, but no `w:` line from `generate(...)`
 
@@ -448,7 +453,7 @@ Some IR APIs additionally require `@OptIn(UnsafeDuringIrConstructionAPI::class)`
 
 ### Version mismatch between plugin and consumer
 
-The `kotlin-compiler-embeddable` version used by the plugin must match the Kotlin version that compiles the consumer. If the consumer compiles with Kotlin 2.4.10, the plugin must depend on `kotlin-compiler-embeddable:2.4.10`. Mismatches cause `NoSuchMethodError` or `LinkageError` at the consumer's compile time — see [`multi-version-kotlin-support`](../multi-version-kotlin-support/guide.md) for strategies if you need to support multiple Kotlin versions.
+The `kotlin-compiler-embeddable` version used by the plugin must match the Kotlin version that compiles the consumer. If the consumer compiles with Kotlin 2.4.20, the plugin must depend on `kotlin-compiler-embeddable:2.4.20`. Mismatches cause `NoSuchMethodError` or `LinkageError` at the consumer's compile time — see [`multi-version-kotlin-support`](../multi-version-kotlin-support/guide.md) for strategies if you need to support multiple Kotlin versions.
 
 ### Wrong artifact
 

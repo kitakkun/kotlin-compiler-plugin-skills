@@ -7,7 +7,7 @@ description: Share computed state across FIR extensions in the same session via 
 
 If two of your FIR extensions need to read the same computed data — annotation argument lists, class metadata, plugin configuration — share it through a `FirExtensionSessionComponent`. This is the dominant state-sharing idiom used by official Kotlin compiler plugins (kotlinx-serialization, allopen, noarg, etc.).
 
-Source: [`kotlin/compiler/fir/tree/src/org/jetbrains/kotlin/fir/extensions/FirExtensionSessionComponent.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.10/compiler/fir/tree/src/org/jetbrains/kotlin/fir/extensions/FirExtensionSessionComponent.kt).
+Source: [`kotlin/compiler/fir/tree/src/org/jetbrains/kotlin/fir/extensions/FirExtensionSessionComponent.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/fir/tree/src/org/jetbrains/kotlin/fir/extensions/FirExtensionSessionComponent.kt).
 
 ## Why a session component, not a singleton
 
@@ -136,7 +136,7 @@ override fun ExtensionRegistrarContext.configurePlugin() {
 
 The registrar's `+` operator overloads accept a `Factory` instance directly (in addition to constructor references and `(FirSession) -> Component` lambdas).
 
-(Pattern from [`kotlin/plugins/noarg/noarg.k2/src/org/jetbrains/kotlin/noarg/fir/NoArgAnnotationNameProvider.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.10/plugins/noarg/noarg.k2/src/org/jetbrains/kotlin/noarg/fir/NoArgAnnotationNameProvider.kt).)
+(Pattern from [`kotlin/plugins/noarg/noarg.k2/src/org/jetbrains/kotlin/noarg/fir/NoArgAnnotationNameProvider.kt`](https://github.com/JetBrains/kotlin/blob/v2.4.20/plugins/noarg/noarg.k2/src/org/jetbrains/kotlin/noarg/fir/NoArgAnnotationNameProvider.kt).)
 
 ## Common gotchas
 

@@ -1,6 +1,49 @@
 # Changes affecting this skill
 
-API migrations relevant to writing FIR additional-checkers extensions. This skill targets the **current stable Kotlin** (2.4.0).
+API migrations relevant to writing FIR additional-checkers extensions. This skill targets the **current stable Kotlin** (2.4.20).
+
+## Kotlin 2.4.10 → 2.4.20
+
+### `FirSimpleFunctionChecker` renamed to `FirNamedFunctionChecker` (and `simpleFunctionCheckers` to `namedFunctionCheckers`)
+
+Upstream commit `6790ace6fb17` ("FE: rename FirSimpleFunctionChecker -> FirNamedFunctionChecker") finished the `FirSimpleFunction` → `FirNamedFunction` naming cleanup on the checker side. At v2.4.20:
+
+- `typealias FirNamedFunctionChecker = FirDeclarationChecker<FirNamedFunction>` (`FirDeclarationCheckerAliases.kt:39`) — the old `FirSimpleFunctionChecker` alias is **gone**, with no deprecated forwarding alias.
+- `DeclarationCheckers.namedFunctionCheckers: Set<FirNamedFunctionChecker>` (`DeclarationCheckers.kt:26`) replaces `simpleFunctionCheckers`.
+
+A plugin built against 2.4.10 that references either name fails to compile against 2.4.20 with an unresolved reference (and, for the bucket, "'namedFunctionCheckers' overrides nothing").
+
+```kotlin
+// Before (≤ 2.4.10)
+object NoFooChecker : FirSimpleFunctionChecker(MppCheckerKind.Common) {
+    context(context: CheckerContext, reporter: DiagnosticReporter)
+    override fun check(declaration: FirNamedFunction) { /* ... */ }
+}
+
+object MyDeclarationCheckers : DeclarationCheckers() {
+    override val simpleFunctionCheckers: Set<FirSimpleFunctionChecker> = setOf(NoFooChecker)
+}
+
+// After (2.4.20+)
+object NoFooChecker : FirNamedFunctionChecker(MppCheckerKind.Common) {
+    context(context: CheckerContext, reporter: DiagnosticReporter)
+    override fun check(declaration: FirNamedFunction) { /* ... */ }
+}
+
+object MyDeclarationCheckers : DeclarationCheckers() {
+    override val namedFunctionCheckers: Set<FirNamedFunctionChecker> = setOf(NoFooChecker)
+}
+```
+
+**Migration**: rename the two identifiers. The `check(declaration: FirNamedFunction)` parameter type is unchanged. If one artifact must compile against both 2.4.10 and 2.4.20, declare the checker as `FirDeclarationChecker<FirFunction>` (i.e. a `FirFunctionChecker`, whose alias name is unchanged) with `check(declaration: FirFunction)`, early-return unless `declaration is FirNamedFunction`, and put it in `functionCheckers: Set<FirFunctionChecker>` — that bucket exists under the same name on both versions and is folded into the named-function dispatch (`allNamedFunctionCheckers` at `DeclarationCheckers.kt:52`). `D` is invariant, so a `FirDeclarationChecker<FirNamedFunction>` cannot go into `functionCheckers`; the wider type is the price of the shared bucket, at the cost of also being invoked for constructors, anonymous functions and accessors, so guard with `if (declaration !is FirNamedFunction) return`.
+
+### New `infoWithoutSource()` diagnostic-factory helper
+
+`KtDiagnosticFactoryDsl.kt:25-28` adds `infoWithoutSource()` (`Severity.INFO`) next to the existing `errorWithoutSource()` / `warningWithoutSource()` / `strongWarningWithoutSource()`. Additive; nothing to migrate.
+
+### `SourceElementPositioningStrategies.VALUE_ARGUMENTS` removed
+
+`SourceElementPositioningStrategies.VALUE_ARGUMENTS` was removed between v2.4.10 and v2.4.20; `VALUE_ARGUMENTS_LIST` remains, and `RECEIVER_OF_DOT_QUALIFIED` was added (`SourceElementPositioningStrategies.kt:209-216`). Only relevant if a factory was declared with `VALUE_ARGUMENTS` — switch it to `VALUE_ARGUMENTS_LIST` or `DEFAULT`.
 
 ## Kotlin 2.3 → 2.4
 
