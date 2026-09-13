@@ -46,3 +46,15 @@ The sample's `fun main() { println(Foo.greet()) }` compiled (referencing `Foo.gr
 2. **The companion-object three-override unit** (as the SKILL.md highlights) is required: `getNestedClassifiersNames` + `generateNestedClassLikeDeclaration` plus `getCallableNamesForClass` returning `INIT` for the synthesised companion + `generateConstructors`. Without `INIT`, IR generation crashes because the companion has no constructor.
 3. **`callableId.callableName`** matched against `Name.identifier("greet")` in `generateFunctions`; the same `Name` is used by the IR extension to filter the function whose body is filled, avoiding accidental rewrites of any other plugin-generated callable.
 4. **The IR side recognises declarations purely by `IrDeclarationOrigin.GeneratedByPlugin.pluginKey`** — no need to look up the FIR symbol from IR. Same `GeneratedDeclarationKey` instance bridges both sides.
+
+## Re-run on Kotlin 2.4.20
+
+**Status: PASS** (unchanged from the 2.3.21 result; no source changes were needed, only the version pins in `build.gradle.kts`).
+
+```
+$ ../gradlew --no-daemon -q clean :sample:run
+hello
+(exit code 0)
+```
+
+Validated with Kotlin 2.4.20, Gradle 9.5.0, JDK 21 on 2026-09-10.

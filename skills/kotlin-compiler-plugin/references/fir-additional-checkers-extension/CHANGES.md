@@ -8,10 +8,10 @@ API migrations relevant to writing FIR additional-checkers extensions. This skil
 
 Upstream commit `6790ace6fb17` ("FE: rename FirSimpleFunctionChecker -> FirNamedFunctionChecker") finished the `FirSimpleFunction` → `FirNamedFunction` naming cleanup on the checker side. At v2.4.20:
 
-- `typealias FirNamedFunctionChecker = FirDeclarationChecker<FirNamedFunction>` (`FirDeclarationCheckerAliases.kt:39`) — the old `FirSimpleFunctionChecker` alias is **gone**, with no deprecated forwarding alias.
-- `DeclarationCheckers.namedFunctionCheckers: Set<FirNamedFunctionChecker>` (`DeclarationCheckers.kt:26`) replaces `simpleFunctionCheckers`.
+- `typealias FirNamedFunctionChecker = FirDeclarationChecker<FirNamedFunction>` (generated: `compiler/fir/checkers/gen/org/jetbrains/kotlin/fir/analysis/checkers/declaration/FirDeclarationCheckerAliases.kt:39`) — the old `FirSimpleFunctionChecker` alias is **gone**, with no deprecated forwarding alias.
+- `DeclarationCheckers.namedFunctionCheckers: Set<FirNamedFunctionChecker>` (generated: `compiler/fir/checkers/gen/org/jetbrains/kotlin/fir/analysis/checkers/declaration/DeclarationCheckers.kt:26`) replaces `simpleFunctionCheckers`.
 
-A plugin built against 2.4.10 that references either name fails to compile against 2.4.20 with an unresolved reference (and, for the bucket, "'namedFunctionCheckers' overrides nothing").
+A plugin built against 2.4.10 that references either name fails to compile against 2.4.20 with an unresolved reference (and, for the bucket, `'simpleFunctionCheckers' overrides nothing.` — the message names the *old* identifier still present in your source).
 
 ```kotlin
 // Before (≤ 2.4.10)
@@ -39,7 +39,7 @@ object MyDeclarationCheckers : DeclarationCheckers() {
 
 ### New `infoWithoutSource()` diagnostic-factory helper
 
-`KtDiagnosticFactoryDsl.kt:25-28` adds `infoWithoutSource()` (`Severity.INFO`) next to the existing `errorWithoutSource()` / `warningWithoutSource()` / `strongWarningWithoutSource()`. Additive; nothing to migrate.
+`compiler/frontend.common-psi/src/org/jetbrains/kotlin/diagnostics/KtDiagnosticFactoryDsl.kt:25-28` adds `infoWithoutSource()` (`Severity.INFO`) next to the existing `errorWithoutSource()` / `warningWithoutSource()` / `strongWarningWithoutSource()`. Additive; nothing to migrate.
 
 ### `SourceElementPositioningStrategies.VALUE_ARGUMENTS` removed
 
@@ -69,7 +69,7 @@ The 2.3.x no-arg overload may be absent, which is why the cross-version path use
 
 ### `-Xcontext-parameters` may now warn as redundant
 
-The checker `check()` API has used context parameters since 2.2.20 (see the timeline below), so the `-Xcontext-parameters` flag is still needed for plugins that build against ≤2.3.x. On 2.4.0 the compiler reports the flag as **redundant** for the affected code. Keep it while you still compile against ≤2.3.x; drop it once you target 2.4+ exclusively.
+The checker `check()` API has used context parameters since 2.2.20 (see the timeline below), so the `-Xcontext-parameters` flag is still needed for plugins that build against ≤2.3.x. On 2.4.0 the compiler reports the flag as **redundant** for the affected code (2.4.20 text: `w: The argument '-Xcontext-parameters' is redundant for the current language version 2.4.`; hidden under Gradle `-q`). Keep it while you still compile against ≤2.3.x; drop it once you target 2.4+ exclusively.
 
 ## Kotlin 2.1.x → 2.2.0 → 2.2.20 (the context-parameter migration timeline)
 

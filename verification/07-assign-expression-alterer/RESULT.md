@@ -77,3 +77,16 @@ verification/07-assign-expression-alterer/
 - We narrow on the property's class ID (`com.example.Property`) instead of an
   annotation, matching the task's spec ("any property whose type is
   `com.example.Property<T>`").
+
+## Re-run on Kotlin 2.4.20
+
+**Status: PASS** (unchanged from the 2.3.21 result; no source changes were needed, only the version pins in `build.gradle.kts`).
+
+```
+$ ../gradlew --no-daemon -q clean :sample:run
+assigned: OK
+get: OK
+(exit code 0)
+```
+
+Validated with Kotlin 2.4.20, Gradle 9.5.0, JDK 21 on 2026-09-10.

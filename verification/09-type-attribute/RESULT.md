@@ -83,3 +83,20 @@ cd verification/09-type-attribute
 ```
 
 Expected: `BUILD FAILED` with exactly one diagnostic at line 16 of `Sample.kt`.
+
+## Re-run on Kotlin 2.4.20
+
+**Status: PASS** (unchanged from the 2.3.21 result; no plugin or sample source changes were needed. Build-file changes: the version pins in `build.gradle.kts`, and the `tasks.withType<KotlinCompile>` block that added `-Xcontext-parameters` to the plugin module was removed — context parameters are stable since Kotlin 2.4.0 and 2.4.20 only reported the flag as redundant. Where the implementation notes above mention that flag, they describe the historical 2.3.21 setup.)
+
+```
+$ ../gradlew --no-daemon -q clean :sample:compileKotlin
+e: file://09-type-attribute/sample/src/main/kotlin/Sample.kt:16:18 Expected an argument of type @Positive Int, but got a plain Int
+FAILURE: Build failed with an exception.
+* What went wrong:
+Execution failed for task ':sample:compileKotlin' (registered by plugin 'org.jetbrains.kotlin.jvm').
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
+   > Compilation error. See log for more details
+(exit code 1, as required for a diagnostic-style probe)
+```
+
+Validated with Kotlin 2.4.20, Gradle 9.5.0, JDK 21 on 2026-09-10.

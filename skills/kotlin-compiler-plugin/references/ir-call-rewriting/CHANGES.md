@@ -9,7 +9,7 @@ Nothing on `IrMemberAccessExpression` changed for callers (`arguments` merely be
 - `IrAnnotation.getAnnotationStringValue()` / `getAnnotationStringValue(name)` — **removed**.
 - `IrAnnotation.getAnnotationValueOrNull<T>(name)` — **removed**.
 - `IrConstructorCall.getValueArgument(name: Name)` — **removed**.
-- `IrAnnotation.symbol` (the constructor symbol) — `@DeprecatedCompilerApi(deprecatedSince = _2_4_20)`; use the new `IrAnnotation.classSymbol: IrClassSymbol` to identify the annotation class.
+- `IrAnnotation.symbol` (the constructor symbol) — `@DeprecatedCompilerApi(deprecatedSince = _2_4_20)`; use the new `IrAnnotation.classSymbol: IrClassSymbol` to identify the annotation class. Note that `@DeprecatedCompilerApi` is a `@RequiresOptIn(level = WARNING)` marker (`compiler/util/src/org/jetbrains/kotlin/DeprecatedCompilerApi.kt`), **not** `kotlin.Deprecated`: the compiler prints `w: ... This compiler API is deprecated` rather than `'symbol' is deprecated. ...`, and `@Suppress("DEPRECATION")` does not silence it — either opt in with `@OptIn(DeprecatedCompilerApi::class)` or move to `classSymbol`. Compare `classSymbol` against a symbol obtained from `finderForSource(file).findClass(classId)`, or use `isAnnotation(ClassId)` / `hasAnnotation(ClassId)`; dereferencing `classSymbol.owner` triggers the `@UnsafeDuringIrConstructionAPI` opt-in warning.
 
 Replacements (all in `org.jetbrains.kotlin.ir.util` unless noted):
 

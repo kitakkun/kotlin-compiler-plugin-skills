@@ -198,6 +198,27 @@ Note: `requireNotNull` on the source means a `null` source raises `IllegalArgume
 
 ## -Xcontext-parameters flag
 
+### Claim: on 2.4.20 a redundant `-Xcontext-parameters` is reported as `w: The argument '-Xcontext-parameters' is redundant for the current language version 2.4.`
+- **File**: [`kotlin/compiler/cli/src/org/jetbrains/kotlin/cli/common/arguments.kt:212-215`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/cli/src/org/jetbrains/kotlin/cli/common/arguments.kt#L212-L215)
+- **Snippet**:
+  ```kotlin
+  this.report(
+      CliDiagnostics.REDUNDANT_CLI_ARG,
+      "The argument '$renderedArgument' is redundant for the current language version $languageVersion.",
+  )
+  ```
+- **Notes**: `REDUNDANT_CLI_ARG` is a `strongWarningWithoutSource()` factory (`compiler/cli/cli-base/src/org/jetbrains/kotlin/cli/CliDiagnostics.kt:17`), rendered as `w:`. Observed verbatim in `verification/17-named-function-checker` on 2.4.20; the line is suppressed at Gradle's `-q` log level.
+
+### Claim: `infoWithoutSource()` lives in `compiler/frontend.common-psi`, not `compiler/frontend.common`
+- **File**: [`kotlin/compiler/frontend.common-psi/src/org/jetbrains/kotlin/diagnostics/KtDiagnosticFactoryDsl.kt:25-28`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/frontend.common-psi/src/org/jetbrains/kotlin/diagnostics/KtDiagnosticFactoryDsl.kt#L25-L28)
+- **Snippet**:
+  ```kotlin
+  context(container: KtDiagnosticsContainer)
+  fun infoWithoutSource(): SourcelessDiagnosticFactoryDelegateProvider {
+      return SourcelessDiagnosticFactoryDelegateProvider(Severity.INFO, container)
+  }
+  ```
+
 ### Claim: the flag `-Xcontext-parameters` exists and enables `LanguageFeature.ContextParameters`.
 - **File**: [`kotlin/compiler/cli/cli-base/gen/org/jetbrains/kotlin/cli/common/arguments/CommonCompilerArguments.kt:288-293`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/cli/cli-base/gen/org/jetbrains/kotlin/cli/common/arguments/CommonCompilerArguments.kt#L288-L293)
 - **Snippet**:
