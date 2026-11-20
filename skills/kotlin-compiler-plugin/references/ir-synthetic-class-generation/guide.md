@@ -39,7 +39,7 @@ Once you've located the FIR-generated class, all the heavy lifting (fields, cons
 
 ## IR-only pattern (last resort)
 
-If you genuinely need an IR-only class — no FIR declaration, so no source visibility *inside the module that generates it* (and, before Kotlin 2.4.20, none anywhere; since 2.4.20 a single `registerClassAsMetadataVisible` call in step 6 makes it visible to downstream modules) — the steps are:
+If you genuinely need an IR-only class (no FIR declaration; see the visibility notes above and step 6), the steps are:
 
 ### 1. Construct the IrClass
 
@@ -62,7 +62,7 @@ val newClass = factory.buildClass {
 
 `pluginContext.irFactory` is the modern factory. The `buildClass { ... }` DSL is in `org.jetbrains.kotlin.ir.builders.declarations`.
 
-### 2. Add fields
+### 2. Add properties and backing fields
 
 ```kotlin
 import org.jetbrains.kotlin.ir.builders.declarations.addBackingField
@@ -85,7 +85,7 @@ Properties typically need a backing field plus a getter (and a setter for `var`s
 
 ### 3. Add a constructor
 
-The constructor comes *after* the property on purpose: for a holder / data-carrier class the constructor body assigns the backing field, so `nameField` from step 2 must already exist. For a no-arg class drop the `addValueParameter` and `irSetField` lines.
+The constructor comes *after* the property on purpose: for a holder / data-carrier class the constructor body assigns the backing field, so `nameField` from step 2 must already exist. For a no-arg class drop the `addValueParameter` and `irSetField` lines, and also the property from step 2: a non-null backing field that no constructor parameter initializes stays uninitialized, and its getter returns JVM-default `null` despite the non-null type.
 
 ```kotlin
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
@@ -289,7 +289,7 @@ A constructor must call its superclass constructor *and* invoke the instance ini
 
 ### `createThisReceiverParameter()` forgotten
 
-Member functions implicitly take the dispatch receiver as their first parameter. The `createThisReceiverParameter()` method on `IrClass` sets this up. Forgetting it makes member calls fail with `dispatchReceiver is null`. (The older `createParameterDeclarations()` is deprecated since Kotlin 2.1.20 — replace any references in pre-2.1.20 tutorials.)
+`createThisReceiverParameter()` on `IrClass` creates the class's own `thisReceiver` (step 1), which constructor bodies use via `irGet(newClass.thisReceiver!!)`. Forgetting it leaves `thisReceiver` null. Member functions need their own dispatch receiver parameter, set per function; see the next gotcha. (The older `createParameterDeclarations()` is deprecated since Kotlin 2.1.20 — replace any references in pre-2.1.20 tutorials.)
 
 ### `IrClass.addFunction { ... }` produces a JVM-static method unless you add the dispatch receiver
 

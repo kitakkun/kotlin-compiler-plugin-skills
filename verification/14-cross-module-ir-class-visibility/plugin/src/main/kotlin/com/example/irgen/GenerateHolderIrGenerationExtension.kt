@@ -65,20 +65,20 @@ class GenerateHolderIrGenerationExtension : IrGenerationExtension {
             }
 
             override fun visitFile(declaration: IrFile) {
-                // Collect first, then mutate, so we do not append to `declarations` while iterating.
                 val annotated = declaration.declarations
                     .filterIsInstance<IrClass>()
                     .filter { it.hasAnnotation(ANNOTATION_FQN) }
                 for (source in annotated) {
                     val holder = buildHolderClass(pluginContext, declaration, source)
                     declaration.declarations += holder
-                    // Single call: the registrar walks constructors, functions, and properties itself.
+                    // The registrar also walks the holder's constructor, property and function, so
+                    // this one call exposes all of them.
                     pluginContext.metadataDeclarationRegistrar.registerClassAsMetadataVisible(holder)
 
-                    // Optional extra: a nested class `Foo.Nested` inside the SOURCE class. The outer
-                    // class is not plugin-generated, so the nested class is registered on its own.
                     val nested = buildNestedClass(pluginContext, source)
                     source.declarations += nested
+                    // The source class is not plugin-generated, so its generated nested class is
+                    // registered on its own.
                     pluginContext.metadataDeclarationRegistrar.registerClassAsMetadataVisible(nested)
                 }
             }
@@ -88,7 +88,6 @@ class GenerateHolderIrGenerationExtension : IrGenerationExtension {
     private fun buildHolderClass(pluginContext: IrPluginContext, file: IrFile, source: IrClass): IrClass {
         val irBuiltIns = pluginContext.irBuiltIns
 
-        // Step 1: the class shell.
         val holder = pluginContext.irFactory.buildClass {
             name = Name.identifier(source.name.identifier + "Holder")
             kind = ClassKind.CLASS
@@ -101,7 +100,6 @@ class GenerateHolderIrGenerationExtension : IrGenerationExtension {
             createThisReceiverParameter()
         }
 
-        // Step 3 (before the constructor so its body can assign the field): `val value: String`.
         val valueProperty = holder.addProperty {
             name = Name.identifier("value")
             visibility = DescriptorVisibilities.PUBLIC
@@ -113,7 +111,6 @@ class GenerateHolderIrGenerationExtension : IrGenerationExtension {
         }
         valueProperty.addDefaultGetter(holder, irBuiltIns)
 
-        // Step 2: `constructor(value: String)` that calls Any(), runs the initializer, then stores the field.
         holder.addConstructor {
             isPrimary = true
             visibility = DescriptorVisibilities.PUBLIC
@@ -131,14 +128,14 @@ class GenerateHolderIrGenerationExtension : IrGenerationExtension {
             }
         }
 
-        // Step 4: `fun describe(): String = "holder:" + value`.
         holder.addFunction {
             name = Name.identifier("describe")
             returnType = irBuiltIns.stringType
             visibility = DescriptorVisibilities.PUBLIC
             modality = Modality.FINAL
         }.apply {
-            // The DSL overload of addFunction does not add a dispatch receiver (guide: "Common gotchas").
+            // The addFunction DSL does not add a dispatch receiver, so the function sets one
+            // explicitly.
             val dispatchReceiver = createDispatchReceiverParameterWithClassParent()
             parameters = listOf(dispatchReceiver)
             val builder = DeclarationIrBuilder(pluginContext, symbol)

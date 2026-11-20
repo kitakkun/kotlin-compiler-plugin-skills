@@ -35,28 +35,24 @@ class TagIrGenerationExtension : IrGenerationExtension {
         moduleFragment.transformChildrenVoid(object : IrElementTransformerVoidWithContext() {
             override fun visitFunctionNew(declaration: IrFunction): IrStatement {
                 val processed = super.visitFunctionNew(declaration) as IrFunction
-                // ClassId overload of hasAnnotation (IrUtils.kt:360 at v2.4.20).
                 if (!processed.hasAnnotation(TAG_CLASS_ID)) return processed
 
                 val annotation = processed.getAnnotation(TAG_FQ_NAME)
                     ?: error("hasAnnotation(ClassId) was true but getAnnotation(FqName) returned null on ${processed.name}")
-                // New in 2.4.20: isAnnotation(ClassId) overload and classSymbol instead of the deprecated `symbol`.
                 check(annotation.isAnnotation(TAG_CLASS_ID)) { "isAnnotation(ClassId) disagreed with hasAnnotation(ClassId)" }
-                // Compare symbols, not owners: `classSymbol.owner` would need an @UnsafeDuringIrConstructionAPI opt-in.
-                // The annotation class is declared in the file being visited, so record an IC lookup from that file.
+                // finderForSource records the incremental-compilation lookup from this file.
+                // Symbols are compared instead of owners because owner access needs the unsafe
+                // IR-construction opt-in.
                 val tagClassSymbol = pluginContext.finderForSource(currentFile).findClass(TAG_CLASS_ID)
                     ?: error("findClass(${TAG_CLASS_ID}) returned null")
                 check(annotation.classSymbol == tagClassSymbol) { "classSymbol does not match findClass(TAG_CLASS_ID)" }
                 check(processed.hasAnnotation(tagClassSymbol)) { "hasAnnotation(IrClassSymbol) disagreed with hasAnnotation(ClassId)" }
 
-                // Argument 1: IrAnnotation.getConstArgument<T>(name) (AdditionalIrUtils.kt:413 at v2.4.20).
                 val name = annotation.getConstArgument<String>("name")
                     ?: error("@Tag on ${processed.name} has no const 'name' argument")
-                // Argument 2: IrAnnotationContainer.getAnnotationArgumentValue<T>(fqName, argName) (IrUtils.kt:367).
                 val times = processed.getAnnotationArgumentValue<Int>(TAG_FQ_NAME, "times")
                     ?: error("@Tag on ${processed.name} has no const 'times' argument")
 
-                // Cross-check through the raw argumentMapping view declared on the IrAnnotation node itself.
                 val rawName = (annotation.argumentMapping[Name.identifier("name")] as? IrConst)?.value
                 val rawTimes = (annotation.argumentMapping[Name.identifier("times")] as? IrConst)?.value
                 check(rawName == name && rawTimes == times) {

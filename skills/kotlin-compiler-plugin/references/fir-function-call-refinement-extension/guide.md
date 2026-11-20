@@ -155,7 +155,7 @@ private sealed class RefinedSourceKind {
     data class Schema(val name: String) : RefinedSourceKind()
 }
 
-data object MyRefinementKey : GeneratedDeclarationKey()
+// `MyRefinementKey` is declared once, in the copy-pasteable generator below.
 
 // Plus the companion `MyRefinedClassMemberGenerator : FirDeclarationGenerationExtension` that supplies
 // the primary constructor of every `Refined_*` class — full listing under
@@ -199,7 +199,7 @@ Caused by: java.lang.NullPointerException
 
 (line 76 at 2.4.20 is `primaryConstructor?.let { declarationStorage.getCachedIrConstructorSymbol(it)!!.owner }`). The `FirConstructor` branch of `processMemberDeclaration` skips primary constructors on purpose ("already created in `processClassMembers`"), so there is no second chance. Leaving the class with **no** constructor at all gets you past fir2ir but fails in `LocalDeclarationsLowering` with `AssertionError: Expected at least one constructor calling super`.
 
-**Fix.** Register a companion `FirDeclarationGenerationExtension` that recognizes your local classes by origin key, advertises `SpecialNames.INIT`, and returns a primary constructor built with the plugin-utils helper. `generateDelegatedNoArgConstructorCall = true` fills in `delegatedConstructor` (a call to `Any()`), and fir2ir synthesizes the constructor body from `delegatedConstructor` plus an `IrInstanceInitializerCall` even though `body == null` — no IR-side body filler is needed. Copy-pasteable (this is the generator from a probe plugin that was built and run against 2.4.20, renamed):
+**Fix.** Register a companion `FirDeclarationGenerationExtension` that recognizes your local classes by origin key, advertises `SpecialNames.INIT`, and returns a primary constructor built with the plugin-utils helper. `generateDelegatedNoArgConstructorCall = true` fills in `delegatedConstructor` (a call to `Any()`), and fir2ir synthesizes the constructor body from `delegatedConstructor` plus an `IrInstanceInitializerCall` even though `body == null` — no IR-side body filler is needed. Copy-pasteable (a renamed copy of `RefineSchemaConstructorGenerator` in `verification/11-function-call-refinement/plugin/src/main/kotlin/com/example/refineplugin/fir/RefineCallExtension.kt`, built and run against 2.4.20):
 
 ```kotlin
 import org.jetbrains.kotlin.GeneratedDeclarationKey

@@ -37,7 +37,7 @@ Verify the three claims the skill makes about plugin-side message reporting sinc
 `../gradlew --no-daemon clean :sample:compileKotlin` succeeds and its output contains `w: hello from plugin`.
 
 Additionally (claim 1, negative case, not part of the committed state): temporarily removing
-`MessageCollectorAccess::class` from the registrar's `@OptIn` makes `:plugin:compileKotlin` fail with the
+`MessageCollectorAccess::class` from the `@OptIn` on the private `obtainMessageCollector` accessor makes `:plugin:compileKotlin` fail with the
 `Direct access to the message collector is discouraged...` error. The opt-in is restored afterwards.
 
 ## FAIL criterion

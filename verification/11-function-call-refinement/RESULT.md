@@ -219,7 +219,7 @@ All `build.gradle.kts` pins were bumped from 2.3.21 to 2.4.20 (`kotlin("jvm")`,
 ### Failure seen with the unchanged 2.3.21 plugin code
 
 `../gradlew --no-daemon -q clean :sample:run` failed while compiling the sample —
-the same **Mode A** NPE as on 2.3.21, one line lower after upstream drift:
+the same **Mode A** NPE as on 2.3.21, the same `!!`, now at `ClassMemberGenerator.kt:76` instead of `:70` after upstream drift:
 
 ```
 e: org.jetbrains.kotlin.util.FileAnalysisException: While analysing .../sample/src/main/kotlin/Main.kt:11:5:
@@ -393,7 +393,7 @@ What was missing:
   `fir-function-call-refinement-extension/guide.md`, its `CHANGES.md`, or
   `fir-declaration-generation-extension/guide.md` says that a class with
   `FirDeclarationOrigin.Plugin` origin has its declared member scope computed only from
-  `FirDeclarationGenerationExtension`s (`FirDeclaredMemberScopeProvider.kt:88-94`), so
+  `FirDeclarationGenerationExtension`s (`FirDeclaredMemberScopeProvider.kt:88-94`, v2.3.21), so
   members added to `FirRegularClass.declarations` by hand are invisible to
   `primaryConstructorIfAny` / `constructors(session)` / `unsubstitutedScope()` and to fir2ir's
   `processClassMembers`. This single fact explains the 2.3.21 PARTIAL result, the NPE here,

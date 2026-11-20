@@ -87,7 +87,7 @@ object NoShoutingChecker : FirNamedFunctionChecker(MppCheckerKind.Common) {
     context(context: CheckerContext, reporter: DiagnosticReporter)
     override fun check(declaration: FirNamedFunction) {
         val name = declaration.name.asString()
-        if (!name.any { it.isLetter() }) return
+        if (name.none { it.isUpperCase() }) return
         if (name != name.uppercase()) return
         val source = declaration.source ?: return
         reporter.reportOn(source, NoShoutingDiagnostics.NO_SHOUTING, name)

@@ -13,12 +13,8 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.MessageCollectorAccess
 import org.jetbrains.kotlin.config.messageCollector
 
-// Claim (1): since Kotlin 2.4.20 `CompilerConfiguration.messageCollector` (and
-// `CommonConfigurationKeys.MESSAGE_COLLECTOR_KEY`) are gated behind the
-// `@RequiresOptIn` marker `MessageCollectorAccess`. The opt-in is scoped to this
-// one accessor function on purpose: everything else in this file, including the
-// `report*` helper calls in the registrar, compiles WITHOUT the opt-in.
-// Removing the `@OptIn` below must turn this function into a compile error.
+// The messageCollector accessor is gated behind the MessageCollectorAccess opt-in, which is scoped
+// to this function alone; the report helpers in this file compile without it.
 @OptIn(MessageCollectorAccess::class)
 private fun obtainMessageCollector(configuration: CompilerConfiguration): MessageCollector =
     configuration.messageCollector
@@ -29,8 +25,6 @@ class MessageCollectorAccessComponentRegistrar : CompilerPluginRegistrar() {
     override val supportsK2: Boolean = true
 
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
-        // Claim (3): the opt-in-free helpers from org.jetbrains.kotlin.cli. This class
-        // carries no MessageCollectorAccess opt-in, so these calls prove the claim.
         configuration.reportInfo("15-mca: reportInfo from registrar")
         configuration.reportLog("15-mca: reportLog from registrar")
         configuration.report(
@@ -38,7 +32,6 @@ class MessageCollectorAccessComponentRegistrar : CompilerPluginRegistrar() {
             "15-mca: report(COMPILER_PLUGIN_INITIALIZATION_WARNING) from registrar",
         )
 
-        // Claim (1)/(2): direct collector access goes through the opted-in accessor.
         val messageCollector = obtainMessageCollector(configuration)
         messageCollector.report(CompilerMessageSeverity.WARNING, "15-mca: hello from registrar")
         IrGenerationExtension.registerExtension(HelloIrGenerationExtension(messageCollector))

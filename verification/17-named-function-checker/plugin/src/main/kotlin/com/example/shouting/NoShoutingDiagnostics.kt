@@ -9,7 +9,6 @@ import org.jetbrains.kotlin.diagnostics.rendering.CommonRenderers
 import org.jetbrains.kotlin.psi.KtNamedFunction
 
 object NoShoutingDiagnostics : KtDiagnosticsContainer() {
-    // Slot {0} is the offending function name; the squiggle covers only the name identifier.
     val NO_SHOUTING by error1<KtNamedFunction, String>(SourceElementPositioningStrategies.NAME_IDENTIFIER)
 
     override fun getRendererFactory(): BaseDiagnosticRendererFactory = NoShoutingDefaultErrorMessages
@@ -20,6 +19,8 @@ object NoShoutingDefaultErrorMessages : BaseDiagnosticRendererFactory() {
         map.put(
             NoShoutingDiagnostics.NO_SHOUTING,
             "Function name ''{0}'' must not be all upper-case",
+            // The message is a java.text.MessageFormat pattern, so the quotes are doubled to render
+            // as single quotes.
             CommonRenderers.STRING,
         )
     }

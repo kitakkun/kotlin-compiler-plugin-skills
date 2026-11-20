@@ -234,21 +234,15 @@ val TAG_CLASS_ID: ClassId = ClassId.topLevel(FqName("com.example.Tag"))
 val TAG_FQ_NAME: FqName = TAG_CLASS_ID.asSingleFqName()
 
 fun readTag(enclosing: IrFunction): Pair<String, Int>? {
-    if (!enclosing.hasAnnotation(TAG_CLASS_ID)) return null
     val annotation = enclosing.getAnnotation(TAG_FQ_NAME) ?: return null
-    check(annotation.isAnnotation(TAG_CLASS_ID))
-
     val name = annotation.getConstArgument<String>("name") ?: return null
-    val times = enclosing.getAnnotationArgumentValue<Int>(TAG_FQ_NAME, "times") ?: return null
-
-    // Raw view — the same lookup by hand, useful for non-const arguments (arrays, enums, nested annotations):
-    val rawName = (annotation.argumentMapping[Name.identifier("name")] as? IrConst)?.value
-    check(rawName == name)
+    // `times` has a default in the annotation class, but a call site that omits it leaves it absent here.
+    val times = annotation.getConstArgument<Int>("times") ?: 1
     return name to times
 }
 ```
 
-All five helpers are top-level functions in `org.jetbrains.kotlin.ir.util` and need the imports shown; `argumentMapping` and `classSymbol` are members of `org.jetbrains.kotlin.ir.expressions.IrAnnotation`. `getConstArgument` / `getAnnotationArgumentValue` return `null` when the argument is absent or is not an `IrConst`, so the value you get back is already unwrapped (`String`, `Int`, ...). To identify the annotation class, compare `annotation.classSymbol` against a symbol from `pluginContext.finderForSource(file).findClass(classId)` or just use `isAnnotation(ClassId)` — do not dereference `classSymbol.owner` (that trips the `@UnsafeDuringIrConstructionAPI` opt-in warning), and do not read `annotation.symbol` (the constructor symbol), which is `@DeprecatedCompilerApi` since 2.4.20 and warns `This compiler API is deprecated`.
+The helpers are top-level functions in `org.jetbrains.kotlin.ir.util` and need the imports shown; `argumentMapping` and `classSymbol` are members of `org.jetbrains.kotlin.ir.expressions.IrAnnotation`. `getConstArgument` / `getAnnotationArgumentValue` return `null` when the argument is absent or is not an `IrConst`, so the value you get back is already unwrapped (`String`, `Int`, ...). **Omitted arguments:** an argument the call site leaves out is absent, even when the annotation class gives it a default, so `getConstArgument` returns `null` for it. Fall back to the default yourself (as `times` does above) or read the default from the annotation class's constructor parameter. Otherwise `@Tag(name = "x")` silently skips the rewrite. To identify the annotation class, compare `annotation.classSymbol` against a symbol from `pluginContext.finderForSource(file).findClass(classId)` or just use `isAnnotation(ClassId)` — do not dereference `classSymbol.owner` (that trips the `@UnsafeDuringIrConstructionAPI` opt-in warning), and do not read `annotation.symbol` (the constructor symbol), which is `@DeprecatedCompilerApi` since 2.4.20 and warns `This compiler API is deprecated`.
 
 ## Common gotchas
 

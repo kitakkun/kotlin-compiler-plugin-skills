@@ -4,11 +4,11 @@ import org.jetbrains.kotlin.GeneratedDeclarationKey
 import org.jetbrains.kotlin.KtFakeSourceElementKind
 import org.jetbrains.kotlin.KtSourceElement
 import org.jetbrains.kotlin.contracts.description.EventOccurrencesRange
-import org.jetbrains.kotlin.fakeElement
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.EffectiveVisibility
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
+import org.jetbrains.kotlin.fakeElement
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirFunctionTarget
 import org.jetbrains.kotlin.fir.FirSession
@@ -83,27 +83,13 @@ class RefineCallExtension(session: FirSession) : FirFunctionCallRefinementExtens
 
         System.err.println("[RefineCallExtension] intercept fired for ${symbol.callableId}")
 
-        // Build a synthetic local class `RefinedSchema`.
-        //
-        // NOTE: do NOT put a hand-built primary constructor into `declarations` here.
-        // The class has `FirDeclarationOrigin.Plugin` (origin.generated == true), and for
-        // such classes `FirDeclaredMemberScopeProvider.createDeclaredMemberScope` builds the
-        // declared member scope ONLY from FirDeclarationGenerationExtension results
-        // (FirGeneratedClassDeclaredMemberScope with scopeForGeneratedClass = true) and
-        // ignores `klass.declarations`. fir2ir's `processClassMembers` looks the primary
-        // constructor up through that scope (`primaryConstructorIfAny(session)`), so a
-        // constructor that only lives in `declarations` never gets an IR constructor cached,
-        // and `ClassMemberGenerator.convertClassContent` later NPEs on
-        // `getCachedIrConstructorSymbol(it)!!`. The constructor is instead supplied by
-        // `RefineSchemaConstructorGenerator` below (same pattern as kotlin-dataframe's
-        // TokenContentGenerator).
         val schemaId = localClassId(Name.identifier("RefinedSchema"))
         val schemaSymbol = FirRegularClassSymbol(schemaId)
         val anyType = session.builtinTypes.anyType.coneType
 
         val schemaClass = buildRegularClass {
-            // 2.4.20+: every local declaration injected into a source file must carry a
-            // distinct source element; use PluginGenerated.Custom with a per-class marker.
+            // Each local class injected into a source file needs a distinct source element, so the
+            // source kind carries the class name.
             source = callInfo.callSite.source?.fakeElement(
                 KtFakeSourceElementKind.PluginGenerated.Custom(
                     RefineSourceElementKind.SchemaClass(schemaId.shortClassName.asString()),
@@ -191,9 +177,8 @@ class RefineCallExtension(session: FirSession) : FirFunctionCallRefinementExtens
                 returnTypeRef = buildResolvedTypeRef { coneType = returnType }
                 body = buildBlock {
                     this.coneTypeOrNull = returnType
-                    // The schema class is added as a statement so it becomes a real
-                    // local declaration in the IR tree (otherwise JvmInventNamesForLocalClasses
-                    // never visits it). See RESULT.md.
+                    // Adding the class as a statement puts it in the IR tree; JVM local-class
+                    // naming skips classes that are absent from it.
                     statements += schemaClass
                     statements += buildReturnExpression {
                         result = call
@@ -264,6 +249,7 @@ class RefineSchemaConstructorGenerator(session: FirSession) : FirDeclarationGene
         isLocal && (origin as? FirDeclarationOrigin.Plugin)?.key == RefinePluginKey
 
     override fun getCallableNamesForClass(classSymbol: FirClassSymbol<*>, context: MemberGenerationContext): Set<Name> =
+        // Constructors are requested through the INIT callable name, so it must be listed here.
         if (classSymbol.isRefinedSchema()) setOf(SpecialNames.INIT) else emptySet()
 
     override fun generateConstructors(context: MemberGenerationContext): List<FirConstructorSymbol> {

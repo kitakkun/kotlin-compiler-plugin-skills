@@ -15,16 +15,16 @@ class NoShoutingCheckersExtension(session: FirSession) : FirAdditionalCheckersEx
 }
 
 object NoShoutingDeclarationCheckers : DeclarationCheckers() {
-    // Kotlin 2.4.20: `namedFunctionCheckers` (was `simpleFunctionCheckers` up to 2.4.10).
     override val namedFunctionCheckers: Set<FirNamedFunctionChecker> = setOf(NoShoutingChecker)
 }
 
-// Kotlin 2.4.20: `FirNamedFunctionChecker` (was `FirSimpleFunctionChecker` up to 2.4.10).
 object NoShoutingChecker : FirNamedFunctionChecker(MppCheckerKind.Common) {
     context(context: CheckerContext, reporter: DiagnosticReporter)
     override fun check(declaration: FirNamedFunction) {
         val name = declaration.name.asString()
-        if (!name.any { it.isLetter() }) return
+        // Names without any uppercase letter, such as `_1`, equal their uppercase form and must not
+        // be reported.
+        if (name.none { it.isUpperCase() }) return
         if (name != name.uppercase()) return
         val source = declaration.source ?: return
         reporter.reportOn(source, NoShoutingDiagnostics.NO_SHOUTING, name)

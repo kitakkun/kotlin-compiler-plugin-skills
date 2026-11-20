@@ -21,6 +21,5 @@ tasks.withType<KotlinCompile>().configureEach {
             "-Xplugin=${files.first().asFile.absolutePath}"
         }
     )
-    // Render the factory name (NO_SHOUTING) next to the message so the PASS grep can match it.
     compilerOptions.freeCompilerArgs.add("-Xrender-internal-diagnostic-names")
 }

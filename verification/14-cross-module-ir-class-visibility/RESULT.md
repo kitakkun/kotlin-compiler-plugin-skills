@@ -128,7 +128,7 @@ holder.addFunction { name = Name.identifier("describe"); returnType = irBuiltIns
 Tried and it works: `class Nested { fun ping(): String }` built with `parent = source`
 (the source-declared `Foo`), appended to `source.declarations`, then registered with
 its **own** `registerClassAsMetadataVisible(nested)` call — because the outer class is
-source-declared and is not itself registered, the recursive walk of section 6 never
+source-declared and is not itself registered, the recursive walk of guide section 6 (`ir-synthetic-class-generation`) never
 reaches the nested class, so it must be registered directly. This is the same shape as
 upstream `GeneratedTopLevelClassIrGenerator` case (6) "nested class inside a
 source-declared outer". Module-b resolves `Foo.Nested()` and `ping()` and prints
