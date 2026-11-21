@@ -97,3 +97,15 @@ The behavioural evidence:
 * `sample/src/main/kotlin/Tracked.kt` – the `@Tracked` annotation.
 * `sample/src/main/kotlin/Main.kt` – `@Tracked Base`, `Sub : Base()`,
   `main()` printing `"Base"`.
+
+## Re-run on Kotlin 2.4.20
+
+**Status: PASS** (unchanged from the 2.3.21 result; no plugin or sample source changes were needed. Build-file changes: the version pins in `build.gradle.kts`, and the `tasks.withType<KotlinCompile>` block that added `-Xcontext-parameters` to the plugin module was removed — context parameters are stable since Kotlin 2.4.0 and 2.4.20 only reported the flag as redundant. Where the implementation notes above mention that flag, they describe the historical 2.3.21 setup.)
+
+```
+$ ../gradlew --no-daemon -q clean :sample:run
+Base
+(exit code 0)
+```
+
+Validated with Kotlin 2.4.20, Gradle 9.5.0, JDK 21 on 2026-09-10.

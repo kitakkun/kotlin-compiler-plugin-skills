@@ -7,6 +7,7 @@ class RefineFirExtensionRegistrar : FirExtensionRegistrar() {
     @OptIn(FirExtensionApiInternals::class)
     override fun ExtensionRegistrarContext.configurePlugin() {
         +::RefineCallExtension
+        +::RefineSchemaConstructorGenerator
         +::RefineCallDataStorage
     }
 }

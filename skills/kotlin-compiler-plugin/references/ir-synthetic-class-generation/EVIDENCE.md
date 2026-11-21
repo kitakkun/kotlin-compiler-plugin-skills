@@ -65,6 +65,36 @@ inline fun IrClass.addProperty(builder: IrPropertyBuilder.() -> Unit): IrPropert
 inline fun IrClass.addFunction(builder: IrFunctionBuilder.() -> Unit): IrSimpleFunction =
     factory.addFunction(this, builder)
 ```
+The builder overload never touches `parameters`; the dispatch receiver has to be added by the caller (guide step 4 and the gotcha). The helper for that is `createDispatchReceiverParameterWithClassParent()` at [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/util/IrUtils.kt:1153`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/util/IrUtils.kt#L1153), which upstream `plugin-sandbox` uses the same way (`parameters += dispatch`, [`GeneratedTopLevelClassIrGenerator.kt:357-358`](https://github.com/JetBrains/kotlin/blob/v2.4.20/plugins/plugin-sandbox/src/org/jetbrains/kotlin/plugin/sandbox/ir/GeneratedTopLevelClassIrGenerator.kt#L357-L358)).
+
+### Claim: `IrProperty.addBackingField { }` builds the field with the property's name, `PROPERTY_BACKING_FIELD` origin, `PRIVATE` visibility, and wires `backingField`, `correspondingPropertySymbol`, and `parent`
+**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/declarations/declarationBuilders.kt:214-225`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/declarations/declarationBuilders.kt#L214-L225)
+**Snippet**:
+```kotlin
+inline fun IrProperty.addBackingField(builder: IrFieldBuilder.() -> Unit = {}): IrField =
+    IrFieldBuilder().run {
+        name = this@addBackingField.name
+        origin = IrDeclarationOrigin.PROPERTY_BACKING_FIELD
+        visibility = DescriptorVisibilities.PRIVATE
+        builder()
+        factory.buildField(this).also { field ->
+            this@addBackingField.backingField = field
+            field.correspondingPropertySymbol = this@addBackingField.symbol
+            field.parent = this@addBackingField.parent
+        }
+    }
+```
+`IrClass.addProperty` (`:127-131`) appends to `declarations` and sets `property.parent`, so the field's `parent` is correct as long as `addProperty` ran first. `addDefaultGetter` (`:155-156`) starts with `val field = backingField!!`, so it must be called after `addBackingField`. Upstream usage: [`GeneratedTopLevelClassIrGenerator.kt:341-346`](https://github.com/JetBrains/kotlin/blob/v2.4.20/plugins/plugin-sandbox/src/org/jetbrains/kotlin/plugin/sandbox/ir/GeneratedTopLevelClassIrGenerator.kt#L341-L346).
+
+### Claim: `IrFunction.addValueParameter(name, type)` and `IrBuilder.irSetField(receiver, field, value)` are the helpers for a constructor that stores a parameter into a field
+**File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/declarations/declarationBuilders.kt:377`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/declarations/declarationBuilders.kt#L377) and [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt:152`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/ExpressionHelpers.kt#L152)
+**Snippet**:
+```kotlin
+fun IrFunction.addValueParameter(name: String, type: IrType, origin: IrDeclarationOrigin = IrDeclarationOrigin.DEFINED): IrValueParameter =
+...
+fun IrBuilder.irSetField(receiver: IrExpression?, field: IrField, value: IrExpression, origin: IrStatementOrigin? = null) =
+```
+`addValueParameter` has an `origin` default upstream; the guide passes only `(name, type)`. The `irSetField(irGet(thisReceiver), field, irGet(param))` wiring was verified in `verification/14-cross-module-ir-class-visibility` (2.4.20). Upstream `plugin-sandbox` achieves the same effect via `field.initializer = IrGetValueImpl(..., constructorValueParameter.symbol)` ([`GeneratedTopLevelClassIrGenerator.kt:316`](https://github.com/JetBrains/kotlin/blob/v2.4.20/plugins/plugin-sandbox/src/org/jetbrains/kotlin/plugin/sandbox/ir/GeneratedTopLevelClassIrGenerator.kt#L316), [`:347-349`](https://github.com/JetBrains/kotlin/blob/v2.4.20/plugins/plugin-sandbox/src/org/jetbrains/kotlin/plugin/sandbox/ir/GeneratedTopLevelClassIrGenerator.kt#L347-L349)), which the `IrInstanceInitializerCall` then runs.
 
 ### Claim: `IrClass.addConstructor { ... }` is an extension on `IrClass` and auto-sets `returnType = defaultType`
 **File**: [`kotlin/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/declarations/declarationBuilders.kt:320`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/ir/ir.tree/src/org/jetbrains/kotlin/ir/builders/declarations/declarationBuilders.kt#L320)
@@ -266,6 +296,21 @@ for (klass in listOf(plain, withGeneric, extendsSource, extendsPlain, mySealed, 
 ...
 context.metadataDeclarationRegistrar.registerClassAsMetadataVisible(withNestedFamily)
 ```
+
+### Claim: a generated class nested inside a *source-declared* outer must be registered with its own `registerClassAsMetadataVisible` call
+**File**: [`kotlin/plugins/plugin-sandbox/src/org/jetbrains/kotlin/plugin/sandbox/ir/GeneratedTopLevelClassIrGenerator.kt:118-128`](https://github.com/JetBrains/kotlin/blob/v2.4.20/plugins/plugin-sandbox/src/org/jetbrains/kotlin/plugin/sandbox/ir/GeneratedTopLevelClassIrGenerator.kt#L118-L128)
+**Snippet**:
+```kotlin
+// Test (6): nested class inside a source-declared outer.
+val sourceWithNested = file.declarations.filterIsInstance<IrClass>()
+    .firstOrNull { it.name.identifier == "SourceWithNested" }
+if (sourceWithNested != null) {
+    val nested = buildGeneratedClass(sourceWithNested, "Nested", ...)
+    sourceWithNested.declarations += nested
+    context.metadataDeclarationRegistrar.registerClassAsMetadataVisible(nested)
+}
+```
+The recursive walk in `Fir2IrIrGeneratedDeclarationsRegistrar.kt:421-437` starts from the class passed in; a source outer is never passed in, so a nested generated class is only reached by registering it directly. Verified cross-module on 2.4.20 in `verification/14-cross-module-ir-class-visibility` (downstream `Foo.Nested().ping()` resolved).
 
 ### Claim: the non-FIR (dummy) registrar in `IrPluginContextImpl` implements the new members as no-ops
 **File**: [`kotlin/compiler/ir/backend.common/src/org/jetbrains/kotlin/backend/common/extensions/IrPluginContextImpl.kt:221-223`](https://github.com/JetBrains/kotlin/blob/v2.4.20/compiler/ir/backend.common/src/org/jetbrains/kotlin/backend/common/extensions/IrPluginContextImpl.kt#L221-L223)
